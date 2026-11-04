@@ -2453,7 +2453,17 @@ function Auth({
     event.preventDefault();
     setBusy(true);
     setLocalError("");
-    const data = Object.fromEntries(new FormData(event.currentTarget));
+    const { passwordConfirm, ...data } = Object.fromEntries(
+      new FormData(event.currentTarget),
+    );
+    if (
+      passwordConfirm !== undefined &&
+      passwordConfirm !== (recovering ? data.newPassword : data.password)
+    ) {
+      setLocalError("Las contraseñas no coinciden.");
+      setBusy(false);
+      return;
+    }
     try {
       await api(
         recovering
@@ -2590,6 +2600,18 @@ function Auth({
               }
             />
           </Field>
+          {(invitation || recovering) && (
+            <Field label="Repite la contraseña">
+              <input
+                name="passwordConfirm"
+                type="password"
+                minLength={8}
+                maxLength={200}
+                required
+                autoComplete="new-password"
+              />
+            </Field>
+          )}
           {((mfaRequired && !useRecovery) || false) && !recovering && (
             <Field label="Código de autenticación">
               <input

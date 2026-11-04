@@ -130,6 +130,10 @@ try {
     .getByLabel("Correo electrónico", { exact: true })
     .fill(email);
   await securityPage.getByLabel("Contraseña", { exact: true }).fill(password);
+  await securityPage.getByLabel("Repite la contraseña", { exact: true }).fill(password + "-distinta");
+  await securityPage.getByRole("button", { name: "Aceptar invitación", exact: true }).click();
+  await securityPage.getByRole("alert").filter({ hasText: "no coinciden" }).waitFor();
+  await securityPage.getByLabel("Repite la contraseña", { exact: true }).fill(password);
   await securityPage
     .getByRole("button", { name: "Aceptar invitación", exact: true })
     .click();

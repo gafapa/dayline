@@ -251,6 +251,7 @@ try {
   await participant
     .getByLabel("Contraseña", { exact: true })
     .fill("browser-test-password-long");
+  await participant.getByLabel("Repite la contraseña", { exact: true }).fill("browser-test-password-long");
   await participant
     .getByRole("button", { name: "Aceptar invitación", exact: true })
     .click();
