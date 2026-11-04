@@ -994,7 +994,7 @@ export default function App() {
     );
   return (
     <DragProvider onError={(message) => setError(message)}>
-    <div className="app-shell">
+    <div className={`app-shell ${selected ? "with-panel" : ""}`}>
       <a className="skip-link" href="#main">
         Saltar al contenido
       </a>

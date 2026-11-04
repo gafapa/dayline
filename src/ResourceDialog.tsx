@@ -362,6 +362,7 @@ export function ResourceDialog({
       }
       close={requestClose}
       className="resource-dialog"
+      panel
     >
       {resource.data.personalNote && (
         <p className="personal-note-status" role="status">

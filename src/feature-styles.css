@@ -973,3 +973,33 @@
 .ProseMirror .ProseMirror-selectednode, .ProseMirror-hideselection .ProseMirror-selectednode { outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent); border-radius: 6px; }
 .ProseMirror-dropcursor, .prosemirror-dropcursor-block { background: var(--accent) !important; }
 .editor-file-status { margin: 6px 0; font-size: 13px; color: var(--accent); }
+
+/* Detail side panel (master-detail): docked right, the view behind stays usable. */
+.modal.panel {
+  inset: 0 0 0 auto;
+  margin: 0;
+  width: min(520px, 100vw);
+  max-width: 100vw;
+  height: 100dvh;
+  max-height: 100dvh;
+  border: 0;
+  border-left: 1px solid var(--border);
+  border-radius: 0;
+  box-shadow: -12px 0 40px rgba(30, 27, 75, 0.12);
+  z-index: 40;
+}
+.modal.panel:focus { outline: none; }
+.modal.panel .resource-top { padding: 18px 22px 12px; }
+.modal.panel .resource-title { font-size: 21px; line-height: 28px; font-weight: 600; }
+.modal.panel .modal-body { padding: 18px 22px; gap: 16px; }
+.modal.panel .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.modal.panel .modal-footer { flex-wrap: wrap; padding: 12px 22px; }
+.modal.panel .detail-tabs { padding: 0 22px; }
+@media (min-width: 1200px) {
+  .app-shell.with-panel .main-column { margin-right: min(520px, 40vw); }
+  .modal.panel { width: min(520px, 40vw); }
+}
+@media (max-width: 650px) {
+  .modal.panel { width: 100vw; box-shadow: none; }
+  .modal.panel .form-grid { grid-template-columns: 1fr; }
+}

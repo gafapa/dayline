@@ -33,30 +33,45 @@ export function Modal({
   children,
   close,
   className = "",
+  panel = false,
 }: {
   title: string;
   children: ReactNode;
   close: () => void;
   className?: string;
+  /** Docked side panel: non-modal, keeps the view behind it usable. */
+  panel?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   useEffect(() => {
     const previous = document.activeElement as HTMLElement;
-    ref.current?.showModal();
+    if (panel) {
+      ref.current?.show();
+      ref.current?.focus();
+    } else ref.current?.showModal();
     return () => previous?.focus();
   }, []);
   return (
     <dialog
       ref={ref}
       aria-labelledby={titleId}
-      className={`modal ${className}`}
+      aria-modal={panel ? false : undefined}
+      tabIndex={panel ? -1 : undefined}
+      className={`modal ${panel ? "panel" : ""} ${className}`}
       onCancel={(e) => {
         e.preventDefault();
         close();
       }}
+      onKeyDown={(e) => {
+        // Non-modal dialogs don't get the browser's Escape handling.
+        if (panel && e.key === "Escape" && !e.defaultPrevented) {
+          e.preventDefault();
+          close();
+        }
+      }}
       onClick={(e) => {
-        if (e.target === e.currentTarget) close();
+        if (!panel && e.target === e.currentTarget) close();
       }}
     >
       <header className="modal-header">
