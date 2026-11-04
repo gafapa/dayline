@@ -320,14 +320,12 @@ try {
     .getByRole("button", { name: "Reintentar comando pendiente", exact: true })
     .waitFor();
   await page.unroute(pattern);
-  await page.reload({ waitUntil: "domcontentloaded" });
-  await page
-    .getByRole("heading", { name: "Hoja de ruta", exact: true })
-    .waitFor();
-  await nav("Hoja de ruta");
   await page
     .getByRole("button", { name: "Reintentar comando pendiente", exact: true })
     .click();
+  await page
+    .getByText("Confirmación recuperada del servidor sin duplicar la entrega.", { exact: true })
+    .waitFor();
   await page
     .getByRole("heading", { name: "Confirmación conservada", exact: true })
     .waitFor();

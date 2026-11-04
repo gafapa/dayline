@@ -299,7 +299,7 @@ export async function writeUserDraft(
   assertLocalSession(userId);
   const tx = db.transaction("metadata", "readwrite");
   await tx.store.put(value, "draft:" + key);
-  if (protect || key.includes(":command:"))
+  if (protect)
     await tx.store.put(true, "protected-draft:" + key);
   await tx.done;
 }

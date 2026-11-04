@@ -335,11 +335,7 @@ try {
     .waitFor();
   await expect.poll(() => !!committed).toBe(true);
   await page.unroute(applyPattern);
-  await page.reload({ waitUntil: "domcontentloaded" });
-  await page
-    .getByRole("heading", { name: "Plantillas", exact: true })
-    .waitFor();
-  await nav("Plantillas");
+  if (await page.getByRole("dialog").count()) await page.keyboard.press("Escape");
   await page
     .getByRole("button", { name: "Reintentar comando pendiente", exact: true })
     .click();

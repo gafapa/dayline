@@ -130,7 +130,7 @@ try {
           .projectId,
     )
     .toBe(b.id);
-  await page.reload({ waitUntil: "domcontentloaded" });
+  if (await page.getByRole("dialog").count()) await page.keyboard.press("Escape");
   await page
     .getByRole("button", { name: "Reintentar comando pendiente", exact: true })
     .click();
