@@ -144,6 +144,8 @@ export default function App() {
     [toast, setToast] = useState(""),
     [loading, setLoading] = useState(true);
   const pending = loadedScope.current === scopeKey ? pendingState : [];
+  const pendingCount = useRef(0);
+  pendingCount.current = pending.length;
   const workspace = workspaces.find((w) => w.id === workspaceId),
     canEdit = workspace?.role !== "viewer";
   useEffect(() => {
@@ -437,11 +439,16 @@ export default function App() {
       setOnline(navigator.onLine);
       if (document.visibilityState === "visible") void refresh();
     };
+    // Retry queued changes even if an "online" event is missed or lands mid-sync.
+    const retry = setInterval(() => {
+      if (navigator.onLine && pendingCount.current) void refresh();
+    }, 10000);
     window.addEventListener("online", wake);
     window.addEventListener("offline", wake);
     window.addEventListener("focus", wake);
     document.addEventListener("visibilitychange", wake);
     return () => {
+      clearInterval(retry);
       window.removeEventListener("online", wake);
       window.removeEventListener("offline", wake);
       window.removeEventListener("focus", wake);
