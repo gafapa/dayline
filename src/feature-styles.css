@@ -1003,3 +1003,12 @@
   .modal.panel { width: 100vw; box-shadow: none; }
   .modal.panel .form-grid { grid-template-columns: 1fr; }
 }
+/* Sidebar sections: Mi trabajo · Proyectos · Equipo. */
+.tone-notes { --tone: var(--amber); }
+.tone-tasks { --tone: var(--teal); }
+.tone-reports { --tone: var(--blue); }
+.tone-documents { --tone: var(--violet); }
+.sidebar nav[aria-label="Principal"] { display: flex; flex-direction: column; gap: 14px; }
+.sidebar .nav-section > .nav-group, .sidebar .project-nav > .nav-group { margin: 6px 10px 6px; text-transform: uppercase; letter-spacing: .06em; font-size: 11px; font-weight: 600; }
+.sidebar .project-nav { margin: 10px 0 0; }
+.sidebar .nav-all-projects { color: var(--sidebar-muted); }

@@ -68,7 +68,10 @@ try {
   await expect.poll(async () => (await (await context.request.get(base + '/api/me')).json()).preferences.favorites.slice(0, 2)).toEqual([beta.id, alpha.id]);
 
   phase = 'list: reorder with the grip';
-  await page.getByRole('button', { name: 'Lista', exact: true }).click();
+  await expect(async () => {
+    await page.getByRole('button', { name: 'Lista', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Lista', exact: true })).toHaveAttribute('aria-pressed', 'true', { timeout: 2000 });
+  }).toPass({ timeout: 15000 });
   const row = (task) => page.locator('.task-row').filter({ hasText: task.title });
   await drag(row(t1).getByRole('button', { name: `Arrastrar ${t1.title}`, exact: true }), row(t3), { position: { y: 6 } });
   await expect.poll(async () => { const a = await find(ws, t1.id), b = await find(ws, t3.id); return typeof a.data.order === 'number' && typeof b.data.order === 'number' && a.data.order < b.data.order; }).toBe(true);

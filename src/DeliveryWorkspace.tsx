@@ -30,6 +30,8 @@ import {
 } from "../shared/model";
 import { validDay } from "../shared/time";
 type Props = {
+  /** Project the roadmap opens filtered to (the project page tab). */
+  initialProjectId?: string;
   resources: Resource[];
   members: { id: string; name: string }[];
   user: User;
@@ -62,7 +64,7 @@ const initialStatus = (kind: DeliveryKind) =>
 export default function DeliveryWorkspace(props: Props) {
   const { resources, workspace, user, focusId, setFocus, open } = props;
   const [area, setArea] = useState("roadmap"),
-    [projectId, setProjectId] = useState(""),
+    [projectId, setProjectId] = useState(props.initialProjectId || ""),
     [query, setQuery] = useState(""),
     [limit, setLimit] = useState(100),
     [editor, setEditor] = useState<{

@@ -10,7 +10,7 @@ import { readAppRoute, pageHref, type AppPage } from "../shared/navigation";
 import { Modal } from "./components/Primitives";
 import { isDelivery } from "../shared/delivery";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { ArrowRight, Bell, CalendarDays, Check, ChevronDown, ChevronRight, CircleCheck, FileText, Flag, FolderKanban, Inbox, LayoutDashboard, ListFilter, LoaderCircle, LogOut, Menu, MoreHorizontal, Plus, Search, Settings, Sparkles, Star, Target, Trash2, Users, WifiOff, X, History, Layers, Clock3, Sun } from "lucide-react";
+import { ArrowRight, Bell, CalendarDays, Check, ChevronDown, ChevronRight, CircleCheck, FileText, Flag, FolderKanban, Inbox, LayoutDashboard, ListFilter, LoaderCircle, LogOut, Menu, MoreHorizontal, Plus, Search, Settings, Sparkles, Star, Target, Trash2, Users, WifiOff, X, History, Layers, Clock3, Sun, NotebookPen, ListTodo, BarChart3 } from "lucide-react";
 import { api, ApiError, send } from "./api";
 import { cacheSnapshot, beginSnapshotRead, flushOutbox, localSnapshot, pendingOperations, queueMutation, resolveConflict, rememberSession, rememberedSession, forgetSession } from "./storage";
 import { kindLabels, sprintStats, type Resource, type ResourceKind, type User, type Workspace } from "../shared/model";
@@ -58,14 +58,28 @@ const pageTitles: Record<string, string> = {
   platform: "Plataforma",
   trash: "Papelera",
 };
-/** Six daily destinations; each groups related pages shown as section tabs. */
-const navGroups: { label: string; icon: any; pages: Page[] }[] = [
-  { label: "Hoy", icon: Sun, pages: ["overview", "reminders"] },
-  { label: "Bandeja", icon: Inbox, pages: ["inbox"] },
-  { label: "Tareas", icon: CircleCheck, pages: ["my_tasks", "tasks", "calendar"] },
-  { label: "Proyectos", icon: FolderKanban, pages: ["projects"] },
-  { label: "Documentos", icon: FileText, pages: ["documents", "notes", "templates"] },
-  { label: "Planificar", icon: Flag, pages: ["sprints", "planning", "reports", "time"] },
+/** Sidebar destinations: personal work, then team-wide views. Each groups pages shown as tabs. */
+const navGroups: {
+  label: string;
+  icon: any;
+  pages: Page[];
+  section: "mine" | "team";
+}[] = [
+  { label: "Hoy", icon: Sun, pages: ["overview", "reminders"], section: "mine" },
+  { label: "Bandeja", icon: Inbox, pages: ["inbox"], section: "mine" },
+  { label: "Mis tareas", icon: CircleCheck, pages: ["my_tasks"], section: "mine" },
+  { label: "Mis notas", icon: NotebookPen, pages: ["notes"], section: "mine" },
+  { label: "Tareas", icon: ListTodo, pages: ["tasks", "calendar"], section: "team" },
+  { label: "Documentos", icon: FileText, pages: ["documents", "templates"], section: "team" },
+  { label: "Planificación", icon: Flag, pages: ["sprints", "planning"], section: "team" },
+  { label: "Informes y tiempo", icon: BarChart3, pages: ["reports", "time"], section: "team" },
+];
+/** Views shown as tabs inside a project page, each filtered to that project. */
+const projectTabs: [Page, string][] = [
+  ["tasks", "Tareas"],
+  ["calendar", "Calendario"],
+  ["documents", "Documentos"],
+  ["planning", "Hoja de ruta"],
 ];
 const settingsPages: Page[] = [
   "settings",
@@ -1046,86 +1060,98 @@ export default function App() {
           <kbd>⌘ K</kbd>
         </button>
         <nav aria-label="Principal">
-          {navGroups.map(({ label, icon: Icon, pages }) => {
-            const count =
-              label === "Tareas"
-                ? tasks.filter(
-                    (t) =>
-                      t.data.assigneeId === user.id &&
-                      !["done", "cancelled"].includes(t.data.status),
-                  ).length
-                : label === "Bandeja"
-                  ? active.filter(
-                      (r) =>
-                        r.kind === "notification" &&
-                        r.data.assigneeId === user.id &&
-                        !r.data.read,
-                    ).length
-                  : 0;
-            const current =
-              pages.includes(page) && (!projectId || label === "Tareas");
-            return (
-              <button
-                key={label}
-                className={`nav-item ${current ? "selected" : ""}`}
-                aria-current={current ? "page" : undefined}
-                onClick={() => navigate(pages[0])}
-              >
-                <span className={`nav-icon tone-${pages[0]}`}>
-                  <Icon size={16} />
-                </span>
-                <span>{label}</span>
-                {count > 0 && <span className="nav-count">{count}</span>}
-              </button>
-            );
-          })}
-        </nav>
-        {projects.length > 0 && (
-          <div className="project-nav">
-            <p className="nav-group">
-              {(preferences.favorites || []).some((id: string) =>
-                projects.some((p) => p.id === id),
-              )
-                ? "Favoritos"
-                : "Proyectos recientes"}
-              {canEdit && (
-                <button
-                  aria-label="Crear proyecto"
-                  onClick={() => setCreating("project")}
-                >
-                  <Plus size={14} />
-                </button>
+          {(["mine", "team"] as const).map((section) => (
+            <div key={section} className={`nav-section nav-section-${section}`}>
+              <p className="nav-group">{section === "mine" ? "Mi trabajo" : "Equipo"}</p>
+              {navGroups
+                .filter((group) => group.section === section)
+                .map(({ label, icon: Icon, pages }) => {
+                  const count =
+                    label === "Mis tareas"
+                      ? tasks.filter(
+                          (t) =>
+                            t.data.assigneeId === user.id &&
+                            !["done", "cancelled"].includes(t.data.status),
+                        ).length
+                      : label === "Bandeja"
+                        ? active.filter(
+                            (r) =>
+                              r.kind === "notification" &&
+                              r.data.assigneeId === user.id &&
+                              !r.data.read,
+                          ).length
+                        : 0;
+                  const current = pages.includes(page) && !projectId;
+                  return (
+                    <button
+                      key={label}
+                      className={`nav-item ${current ? "selected" : ""}`}
+                      aria-current={current ? "page" : undefined}
+                      onClick={() => navigate(pages[0])}
+                    >
+                      <span className={`nav-icon tone-${pages[0]}`}>
+                        <Icon size={16} />
+                      </span>
+                      <span>{label}</span>
+                      {count > 0 && <span className="nav-count">{count}</span>}
+                    </button>
+                  );
+                })}
+              {section === "mine" && (
+                <div className="project-nav">
+                  <p className="nav-group">
+                    Proyectos
+                    {canEdit && (
+                      <button
+                        aria-label="Crear proyecto"
+                        onClick={() => setCreating("project")}
+                      >
+                        <Plus size={14} />
+                      </button>
+                    )}
+                  </p>
+                  {(() => {
+                    const ids: string[] = preferences.favorites || [];
+                    const favorites = ids
+                      .map((id) => projects.find((p) => p.id === id))
+                      .filter(Boolean) as Resource[];
+                    const list = (favorites.length ? favorites : projects).slice(0, 6);
+                    return list.map((p) => (
+                      <SidebarProject
+                        key={p.id}
+                        project={p}
+                        selected={projectId === p.id}
+                        favorite={favorites.length > 0}
+                        canEdit={canEdit}
+                        open={() => navigate("tasks", p.id)}
+                        moveTask={async (task) => {
+                          if (task.data.projectId === p.id) return;
+                          await save({ ...task, data: { ...task.data, projectId: p.id } });
+                          notify(`«${task.title}» movida a ${p.title}.`);
+                        }}
+                        reorder={(id) => {
+                          const next = ids.filter((v) => v !== id);
+                          next.splice(next.indexOf(p.id), 0, id);
+                          void updatePreference({ favorites: next });
+                        }}
+                      />
+                    ));
+                  })()}
+                  <button
+                    className={`nav-item nav-all-projects ${page === "projects" && !projectId ? "selected" : ""}`}
+                    aria-current={page === "projects" && !projectId ? "page" : undefined}
+                    onClick={() => navigate("projects")}
+                  >
+                    <span className="nav-icon tone-projects">
+                      <FolderKanban size={16} />
+                    </span>
+                    <span>Todos los proyectos</span>
+                  </button>
+                </div>
               )}
-            </p>
-            {(() => {
-              const ids: string[] = preferences.favorites || [];
-              const favorites = ids
-                .map((id) => projects.find((p) => p.id === id))
-                .filter(Boolean) as Resource[];
-              const list = (favorites.length ? favorites : projects).slice(0, 6);
-              return list.map((p) => (
-                <SidebarProject
-                  key={p.id}
-                  project={p}
-                  selected={projectId === p.id}
-                  favorite={favorites.length > 0}
-                  canEdit={canEdit}
-                  open={() => navigate("tasks", p.id)}
-                  moveTask={async (task) => {
-                    if (task.data.projectId === p.id) return;
-                    await save({ ...task, data: { ...task.data, projectId: p.id } });
-                    notify(`«${task.title}» movida a ${p.title}.`);
-                  }}
-                  reorder={(id) => {
-                    const next = ids.filter((v) => v !== id);
-                    next.splice(next.indexOf(p.id), 0, id);
-                    void updatePreference({ favorites: next });
-                  }}
-                />
-              ));
-            })()}
-          </div>
-        )}
+            </div>
+          ))}
+        </nav>
         <div className="sidebar-bottom">
           <button
             className={`nav-item ${settingsPages.includes(page) ? "selected" : ""}`}
@@ -1221,6 +1247,20 @@ export default function App() {
           </button>
         </header>
         <main id="main" className="sheet">
+          {selectedProject && (
+            <nav aria-label="Vistas del proyecto" className="section-tabs">
+              {projectTabs.map(([key, label]) => (
+                <button
+                  key={key}
+                  className={key === page ? "active" : ""}
+                  aria-current={key === page ? "page" : undefined}
+                  onClick={() => navigate(key, selectedProject.id)}
+                >
+                  {label}
+                </button>
+              ))}
+            </nav>
+          )}
           {!selectedProject && pageGroup(page).length > 1 && (
             <nav aria-label="Secciones" className="section-tabs">
               {pageGroup(page)
@@ -1587,6 +1627,7 @@ export default function App() {
                   <SearchField value={query} set={setQuery} />
                   <div className="document-list">
                     {documents
+                      .filter((d) => !projectId || d.data.projectId === projectId)
                       .filter((d) =>
                         `${d.title} ${d.data.description || ""}`
                           .toLowerCase()
@@ -1643,7 +1684,12 @@ export default function App() {
                 </Suspense>
               )}
               {page === "calendar" && (
-                <Calendar tasks={tasks} open={openResource} save={save} canEdit={canEdit} />
+                <Calendar
+                  tasks={projectId ? tasks.filter((t) => t.data.projectId === projectId) : tasks}
+                  open={openResource}
+                  save={save}
+                  canEdit={canEdit}
+                />
               )}
               {page === "team" && (
                 <Team
@@ -1938,6 +1984,8 @@ export default function App() {
                   fallback={<p role="status">Preparando las entregas…</p>}
                 >
                   <DeliveryWorkspace
+                    key={projectId || "all"}
+                    initialProjectId={projectId || ""}
                     resources={resources}
                     members={members}
                     user={user}
