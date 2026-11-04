@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { controlledByServiceWorker } from './service-worker-helper.mjs';
 import { openSection } from './navigation-helper.mjs';
 import { chromium, expect } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
@@ -442,8 +443,8 @@ try {
       exact: true,
     })
     .waitFor();
-  await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 60000 });
-  await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 60000 });
+  await controlledByServiceWorker(page);
+  await controlledByServiceWorker(page);
   await context.setOffline(true);
   await page.reload({ waitUntil: "domcontentloaded" });
   await page

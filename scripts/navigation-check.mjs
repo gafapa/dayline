@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { controlledByServiceWorker } from './service-worker-helper.mjs';
 import { openSection } from './navigation-helper.mjs';
 import { chromium, expect } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
@@ -264,8 +265,8 @@ try {
     ),
     false,
   );
-  await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 60000 });
-  await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 60000 });
+  await controlledByServiceWorker(page);
+  await controlledByServiceWorker(page);
   await context.setOffline(true);
   await page.goto(href(taskA.id), { waitUntil: "domcontentloaded" });
   await expect(title(page)).toHaveValue(taskA.title);
@@ -356,8 +357,8 @@ try {
     .filter({ hasText: "El enlace no está disponible para esta cuenta." })
     .waitFor();
   assert.equal(await reader.getByRole("dialog").count(), 0);
-  await reader.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 60000 });
-  await reader.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 60000 });
+  await controlledByServiceWorker(reader);
+  await controlledByServiceWorker(reader);
   await visitor.setOffline(true);
   await reader.reload({ waitUntil: "domcontentloaded" });
   await reader

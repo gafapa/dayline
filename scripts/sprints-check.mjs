@@ -1,4 +1,5 @@
 import { chromium } from "@playwright/test";
+import { controlledByServiceWorker } from './service-worker-helper.mjs';
 import { openSection } from './navigation-helper.mjs';
 import { writeFile } from "node:fs/promises";
 const base = "http://127.0.0.1:5173",
@@ -161,8 +162,8 @@ try {
     .getByRole("button", { name: "Planificación", exact: true })
     .last()
     .click();
-  await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 60000 });
-  await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 60000 });
+  await controlledByServiceWorker(page);
+  await controlledByServiceWorker(page);
   await context.setOffline(true);
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: "Sprints", exact: true }).waitFor();

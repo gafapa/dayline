@@ -1,4 +1,5 @@
 import { chromium } from "@playwright/test";
+import { controlledByServiceWorker } from './service-worker-helper.mjs';
 import { openSection } from './navigation-helper.mjs';
 import { readFile, writeFile } from "node:fs/promises";
 const base = "http://127.0.0.1:5173";
@@ -30,8 +31,8 @@ try {
   await page
     .getByRole("heading", { name: "Hoy", exact: true })
     .waitFor();
-  await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 60000 });
-  await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 60000 });
+  await controlledByServiceWorker(page);
+  await controlledByServiceWorker(page);
   const title = `Documento creado sin conexión ${Date.now()}`,
     text =
       "Este contenido se creó sin conexión y debe conservarse al recargar.";

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { controlledByServiceWorker } from './service-worker-helper.mjs';
 import { chromium, expect } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
 const base = "http://127.0.0.1:5173",
@@ -174,8 +175,8 @@ try {
     ),
     false,
   );
-  await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 60000 });
-  await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 60000 });
+  await controlledByServiceWorker(page);
+  await controlledByServiceWorker(page);
   await context.setOffline(true);
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(row(document)).toBeVisible();
