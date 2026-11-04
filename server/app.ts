@@ -135,8 +135,18 @@ export async function createApp(
     },
     hsts: production ? undefined : false,
   });
+  // Local test runs may raise every rate limit (never in production) so suites don't sit waiting.
+  const limitScale =
+    !production && Number(process.env.TEST_RATE_LIMIT_SCALE) > 1
+      ? Number(process.env.TEST_RATE_LIMIT_SCALE)
+      : 1;
+  if (limitScale > 1)
+    app.addHook("onRoute", (route) => {
+      const limit = (route.config as any)?.rateLimit;
+      if (limit && typeof limit.max === "number") limit.max *= limitScale;
+    });
   await app.register(rateLimit, {
-    max: 240,
+    max: 240 * limitScale,
     timeWindow: "1 minute",
     allowList: (req) =>
       !req.url.startsWith("/api/") || req.url.split("?")[0] === "/api/health",

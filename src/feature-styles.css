@@ -926,3 +926,51 @@
   .setup-steps li { font-size: 0; gap: 0; justify-content: center; }
   .setup-steps li.current { font-size: 12px; gap: 6px; justify-content: flex-start; grid-column: span 1; }
 }
+
+/* Drag and drop. */
+.drag-overlay { padding: 10px 14px; border-radius: 10px; background: var(--surface); color: var(--text); border: 2px solid var(--accent); box-shadow: 0 12px 32px rgba(30, 27, 75, 0.25); font-weight: 600; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: grabbing; }
+.dragging { opacity: 0.35; }
+.board-task.draggable { cursor: grab; touch-action: manipulation; }
+.board-task.draggable:active { cursor: grabbing; }
+.board-column.drop-armed { outline: 2px dashed color-mix(in srgb, var(--accent) 35%, transparent); outline-offset: -2px; border-radius: 12px; }
+.board-column.drop-over, .calendar-day.drop-over, .calendar-undated.drop-over, .sprint-backlog.drop-over, .sprint-plan-end.drop-over, .attachments.drop-over, .structure-item.drop-over { background: color-mix(in srgb, var(--accent) 10%, var(--surface)); outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 12px; }
+.drop-before { box-shadow: inset 0 3px 0 var(--accent); }
+.board-task.drop-before { box-shadow: 0 -3px 0 var(--accent); }
+.task-row, .structure-item, .sprint-plan-task { position: relative; }
+.drag-grip { position: absolute; left: -26px; top: 50%; transform: translateY(-50%); width: 24px; min-width: 24px; height: 32px; min-height: 32px; padding: 0; border: 0; border-radius: 6px; background: none; color: var(--muted); opacity: 0.45; cursor: grab; touch-action: none; display: inline-flex; align-items: center; justify-content: center; }
+.structure-item > .drag-grip { top: 38px; }
+.task-row:hover > .drag-grip, .structure-item:hover > .drag-grip, .sprint-plan-task:hover > .drag-grip, .drag-grip:focus-visible { opacity: 1; color: var(--accent); background: var(--active); }
+.sprint-plan-task > div:not(.sprint-task-controls) { min-width: 0; flex: 1; }
+.sidebar .nav-item.drop-armed { outline: 1px dashed rgba(255, 255, 255, 0.35); outline-offset: -1px; }
+.sidebar .nav-item.drop-over { background: var(--accent); color: #fff; outline: 0; }
+.drop-zone { display: inline-flex; border-radius: 8px; }
+.drop-zone.drop-armed { outline: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent); }
+.drop-zone.drop-over { outline: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.structure-navigation .drop-zone { display: flex; flex: 1; min-width: 0; }
+.calendar-day button { cursor: grab; touch-action: manipulation; }
+.calendar-undated { margin-top: 16px; padding: 14px 16px; border: 1px dashed var(--control); border-radius: 12px; }
+.calendar-undated h3 { margin: 0 0 4px; font-size: 14px; }
+.calendar-undated p { margin: 0 0 10px; font-size: 13px; }
+.calendar-undated > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.calendar-undated button { min-height: 36px; border-radius: 999px; background: var(--violet-tint); color: var(--violet-ink); border: 0; cursor: grab; touch-action: manipulation; }
+.sprint-plan-end { margin: 6px 0 14px; padding: 12px; border: 1px dashed var(--control); border-radius: 10px; text-align: center; color: var(--muted); font-size: 13px; }
+.sprint-plan-end.drop-armed { border-color: var(--accent); color: var(--accent); }
+.sprint-backlog { margin: 0 0 20px; padding: 14px 16px; border-radius: 12px; background: var(--raised); border: 1px solid var(--border); }
+.sprint-backlog h4 { margin: 0; font-size: 14px; }
+.sprint-backlog h4 small { color: var(--muted); font-weight: 500; margin-left: 4px; }
+.sprint-backlog p { margin: 4px 0 10px; font-size: 13px; }
+.sprint-backlog > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.backlog-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px 0 8px; border-radius: 999px; background: var(--blue-tint); color: var(--blue-ink); font-size: 13px; font-weight: 500; cursor: grab; touch-action: none; user-select: none; }
+.backlog-chip small { opacity: 0.8; }
+.backlog-chip:focus-visible { outline: 2px solid var(--accent); }
+@media (max-width: 650px) {
+  .drag-grip { left: -20px; width: 20px; min-width: 20px; opacity: 0.6; }
+}
+.board-task.draggable, .calendar-day button, .calendar-undated button, .backlog-chip, .drag-grip, .sidebar .project-nav .nav-item { -webkit-user-select: none; user-select: none; }
+/* Document editor: block drag handle and file drops. */
+.block-handle { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 26px; margin-right: 4px; border-radius: 6px; color: var(--muted); cursor: grab; background: var(--surface); }
+.block-handle:hover { color: var(--accent); background: var(--active); }
+.block-handle:active { cursor: grabbing; }
+.ProseMirror .ProseMirror-selectednode, .ProseMirror-hideselection .ProseMirror-selectednode { outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent); border-radius: 6px; }
+.ProseMirror-dropcursor, .prosemirror-dropcursor-block { background: var(--accent) !important; }
+.editor-file-status { margin: 6px 0; font-size: 13px; color: var(--accent); }

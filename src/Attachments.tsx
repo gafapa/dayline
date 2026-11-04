@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Paperclip, Download, Trash2 } from "lucide-react";
 import { api, send } from "./api";
 import { flushOutbox } from "./storage";
@@ -39,7 +39,23 @@ export function Attachments({
 }) {
   const [files, setFiles] = useState<any[]>([]),
     [busy, setBusy] = useState(false),
-    [message, setMessage] = useState("");
+    [message, setMessage] = useState(""),
+    [dropping, setDropping] = useState(false);
+  const uploadAll = async (list: File[]) => {
+    if (!list.length) return;
+    setBusy(true);
+    try {
+      for (const file of list)
+        await uploadAttachment(file, workspaceId, resourceId, userId);
+      await load();
+    } catch (e) {
+      error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const hasFiles = (event: React.DragEvent) =>
+    editable && [...event.dataTransfer.types].includes("Files");
   const load = () =>
     api(`/workspaces/${workspaceId}/resources/${resourceId}/attachments`)
       .then((result) => {
@@ -55,7 +71,25 @@ export function Attachments({
     void load();
   }, [workspaceId, resourceId]);
   return (
-    <section className="attachments">
+    <section
+      className={`attachments ${dropping ? "drop-over" : ""}`}
+      onDragOver={(event) => {
+        if (!hasFiles(event)) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "copy";
+        setDropping(true);
+      }}
+      onDragLeave={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node))
+          setDropping(false);
+      }}
+      onDrop={(event) => {
+        if (!hasFiles(event)) return;
+        event.preventDefault();
+        setDropping(false);
+        void uploadAll([...event.dataTransfer.files]);
+      }}
+    >
       <div className="section-heading">
         <h3>
           <Paperclip size={16} />
@@ -67,21 +101,12 @@ export function Attachments({
             <input
               className="sr-only"
               type="file"
+              multiple
               disabled={busy}
               onChange={async (event) => {
                 const input = event.currentTarget;
-                const file = input.files?.[0];
-                if (!file) return;
-                setBusy(true);
-                try {
-                  await uploadAttachment(file, workspaceId, resourceId, userId);
-                  await load();
-                } catch (e) {
-                  error((e as Error).message);
-                } finally {
-                  setBusy(false);
-                  input.value = "";
-                }
+                await uploadAll([...(input.files || [])]);
+                input.value = "";
               }}
             />
           </label>
@@ -124,7 +149,11 @@ export function Attachments({
         </div>
       ))}
       {!files.length && !message && (
-        <p className="muted">Sin adjuntos. Hasta 5 MiB por archivo.</p>
+        <p className="muted">
+          Sin adjuntos.{" "}
+          {editable ? "Arrastra archivos aquí o usa «Añadir archivo». " : ""}
+          Hasta 5 MiB por archivo.
+        </p>
       )}
     </section>
   );

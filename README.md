@@ -29,7 +29,12 @@ Most project tools open on a wall of boards. Dayline opens on **Hoy (Today)**:
 - today's reminders
 - the active sprint
 
-Six destinations in the sidebar. Everything else lives one click deeper.
+Six destinations in the sidebar. Everything else lives one click deeper. **Almost everything is drag and drop:**
+- Board cards move between states.
+- Lists, favorites and sprint plans reorder.
+- Tasks go onto calendar days or onto a project in the sidebar.
+- Folders and projects nest inside each other.
+- Document blocks rearrange, and files land wherever you drop them.
 
 <table>
 <tr>
@@ -45,7 +50,8 @@ Six destinations in the sidebar. Everything else lives one click deeper.
 <td width="33%" valign="top">
 
 ### 🟣 Projects and tasks
-- Boards, lists and calendar
+- **Board first**: drag cards between states and reorder them
+- Lists and calendar, also drag and drop
 - **Your own workflow states** per project
 - Custom fields, saved views, bulk edits
 - Rules, recurrence and reminders
@@ -55,6 +61,7 @@ Six destinations in the sidebar. Everything else lives one click deeper.
 
 ### 🔵 Documents
 - Real-time collaborative editor (Yjs)
+- Drag blocks by their handle, and drop images and files in
 - Works **offline** and syncs later
 - Templates, folders, subprojects
 - Exports to HTML, PDF and CSV
@@ -154,7 +161,7 @@ npm run build       # web app, service worker and server bundle
 - If the new version doesn't report healthy, the deploy switches back to the previous folder automatically.
 - The image is rebuilt only when `package-lock.json` changes.
 
-**Browser checks.** 22 Playwright scenarios run against the compiled app, using synthetic data only:
+**Browser checks.** 23 Playwright scenarios run against the compiled app, using synthetic data only:
 
 ```bash
 ENCRYPTION_KEY=$(openssl rand -hex 32) npm run preview   # in another terminal
@@ -168,7 +175,7 @@ All of this runs on every push in [GitHub Actions](.github/workflows/ci.yml).
 
 | Layer | Choices |
 |---|---|
-| Web | React, Vite, lucide icons, IBM Plex Sans |
+| Web | React, Vite, dnd-kit (pointer, touch and keyboard drag and drop), lucide icons, IBM Plex Sans |
 | Editor | Tiptap and Yjs over Hocuspocus, with local Yjs persistence |
 | Offline | Service-worker app shell, IndexedDB snapshots and a durable command outbox |
 | API | Fastify, zod validation, same-origin session cookies, rate limits |

@@ -49,6 +49,8 @@ jobs:
           mkdir -p .local
           # Throwaway key for this run's local test server only.
           export ENCRYPTION_KEY="$(openssl rand -hex 32)"
+          # Raised limits for the local test server only (ignored in production).
+          export TEST_RATE_LIMIT_SCALE=50
           nohup npm run preview > .local/preview.log 2>&1 &
           for i in $(seq 1 60); do
             curl -sf http://127.0.0.1:5173/api/health && exit 0

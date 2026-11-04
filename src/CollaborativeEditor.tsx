@@ -1,7 +1,9 @@
 import { requestResourceLink } from "./navigation";
 import { assertDocumentContent } from "../shared/document-content";
 import { useEffect, useState, useRef, lazy, Suspense } from "react";
-import { useEditor, EditorContent } from "@tiptap/react";
+import { useEditor, EditorContent, type Editor as TiptapEditor } from "@tiptap/react";
+import DragHandle from "@tiptap/extension-drag-handle-react";
+import FileHandler from "@tiptap/extension-file-handler";
 import { documentExtensions } from "../shared/editor-schema";
 import { documentDurabilityPayload } from "../shared/durability";
 import { documentHeadings, type DocumentNode } from "../shared/documents";
@@ -27,8 +29,7 @@ import {
   Link2,
   Sigma,
   GitBranch,
-  Plus,
-} from "lucide-react";
+  Plus, GripVertical } from "lucide-react";
 import { api, send } from "./api";
 import { prepareDocumentCache } from "./document-cache";
 import { documentDatabaseChanged } from "./local-database";
@@ -372,7 +373,37 @@ function CollaborativeContent({
   contentCallback.current = onContent;
   const [outline, setOutline] = useState<{ level: number; text: string }[]>([]),
     [restoreError, setRestoreError] = useState(""),
+    [fileStatus, setFileStatus] = useState(""),
     [diagrams, setDiagrams] = useState<string[]>([]);
+  /** Uploads dropped or pasted files: images go inline, other files become attachment links. */
+  const insertFiles = async (target: TiptapEditor, files: File[], pos?: number) => {
+    setFileStatus(files.length === 1 ? `Subiendo ${files[0].name}…` : `Subiendo ${files.length} archivos…`);
+    try {
+      let at = pos ?? target.state.selection.to;
+      for (const file of files) {
+        const attachment = await uploadAttachment(file, workspaceId, documentId, userId);
+        const content = attachment.mime.startsWith("image/")
+          ? { type: "image", attrs: { src: attachment.url, alt: file.name } }
+          : {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: `Adjunto: ${file.name}`,
+                  marks: [{ type: "link", attrs: { href: `${attachment.url}?download=1` } }],
+                },
+              ],
+            };
+        target.chain().focus().insertContentAt(at, content).run();
+        at = target.state.selection.to;
+      }
+      setFileStatus("");
+    } catch (e) {
+      setFileStatus((e as Error).message);
+    }
+  };
+  const fileDrop = useRef(insertFiles);
+  fileDrop.current = insertFiles;
   const editor = useEditor(
     {
       extensions: [
@@ -380,6 +411,10 @@ function CollaborativeContent({
         Collaboration.configure({ document: bundle.doc }),
         Placeholder.configure({
           placeholder: "Escribe una idea, una decisión o el siguiente paso…",
+        }),
+        FileHandler.configure({
+          onDrop: (target, files, pos) => void fileDrop.current(target, files, pos),
+          onPaste: (target, files) => void fileDrop.current(target, files),
         }),
       ],
       editable,
@@ -600,6 +635,18 @@ function CollaborativeContent({
             </button>
           ))}
         </div>
+      )}
+      {fileStatus && (
+        <p className="editor-file-status" role="status">
+          {fileStatus}
+        </p>
+      )}
+      {editable && (
+        <DragHandle editor={editor}>
+          <span className="block-handle" title="Arrastra para mover este bloque">
+            <GripVertical size={16} />
+          </span>
+        </DragHandle>
       )}
       <EditorContent editor={editor} />
       {outline.length > 0 && (

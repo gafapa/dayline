@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, type ReactNode } from "react";
+import { useDrag, useDrop, type DragItem } from "./dnd";
 import {
   Folder,
   FolderKanban,
@@ -6,6 +7,7 @@ import {
   ChevronRight,
   ChevronDown,
   ArrowRight,
+  GripVertical,
 } from "lucide-react";
 import type { Resource, ResourceKind, User, Workspace } from "../shared/model";
 import { kindLabels } from "../shared/model";
@@ -79,6 +81,7 @@ export default function ProjectStructure(props: Props) {
     [showArchived, setShowArchived] = useState(false),
     [creating, setCreating] = useState<StructureKind | null>(null),
     [moving, setMoving] = useState<Resource | null>(null),
+    [moveTo, setMoveTo] = useState<string | null | undefined>(undefined),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -172,14 +175,16 @@ export default function ProjectStructure(props: Props) {
                   ) : (
                     <span className="structure-tree-spacer" />
                   )}
-                  <button
-                    className="structure-location"
-                    aria-current={r.id === currentId ? "location" : undefined}
-                    onClick={() => select(r.id)}
-                  >
-                    <Icon size={16} />
-                    <span title={r.title}>{r.title}</span>
-                  </button>
+                  <DropZone id={`tree:${r.id}`} target={target(r)}>
+                    <button
+                      className="structure-location"
+                      aria-current={r.id === currentId ? "location" : undefined}
+                      onClick={() => select(r.id)}
+                    >
+                      <Icon size={16} />
+                      <span title={r.title}>{r.title}</span>
+                    </button>
+                  </DropZone>
                 </div>
                 {hasChildren && isExpanded
                   ? tree(r.id, depth + 1, new Set([...seen, r.id]))
@@ -190,6 +195,26 @@ export default function ProjectStructure(props: Props) {
       </ul>
     );
   };
+  /** Opens the reviewed move with the destination already chosen. */
+  const dropOn = (item: DragItem, destinationId: string | null) => {
+    if (item.type !== "structure") return;
+    setMoveTo(destinationId);
+    setMoving(item.resource);
+  };
+  const accepts = (item: DragItem, target: Resource | null) =>
+    canEdit &&
+    item.type === "structure" &&
+    !item.resource.data.archived &&
+    (structureParent(item.resource) || null) !== (target?.id || null) &&
+    (!target ||
+      (target.id !== item.resource.id &&
+        !target.data.archived &&
+        !structureBranch(item.resource.id, resources).some((r) => r.id === target.id) &&
+        acceptsChild(target.kind, item.resource.kind)));
+  const target = (r: Resource | null) => ({
+    accepts: (item: DragItem) => accepts(item, r),
+    drop: (item: DragItem) => dropOn(item, r?.id || null),
+  });
   return (
     <section className="project-structure" aria-label="Estructura de proyectos">
       {command.recovery}
@@ -206,13 +231,15 @@ export default function ProjectStructure(props: Props) {
             aria-label="Carpetas y subproyectos"
             className="structure-navigation"
           >
-            <button
-              className="structure-root"
-              aria-current={!currentId ? "location" : undefined}
-              onClick={() => select(null)}
-            >
-              {workspace.name}
-            </button>
+            <DropZone id="tree-root" target={target(null)}>
+              <button
+                className="structure-root"
+                aria-current={!currentId ? "location" : undefined}
+                onClick={() => select(null)}
+              >
+                {workspace.name}
+              </button>
+            </DropZone>
             {tree(null)}
           </nav>
         </details>
@@ -221,16 +248,20 @@ export default function ProjectStructure(props: Props) {
             aria-label="Ruta de la estructura"
             className="structure-breadcrumb"
           >
-            <button onClick={() => select(null)}>Raíz</button>
+            <DropZone id="crumb-root" target={target(null)}>
+              <button onClick={() => select(null)}>Raíz</button>
+            </DropZone>
             {path.map((r) => (
               <span key={r.id}>
                 <ChevronRight size={14} />
-                <button
-                  onClick={() => select(r.id)}
-                  aria-current={r.id === currentId ? "location" : undefined}
-                >
-                  {r.title}
-                </button>
+                <DropZone id={`crumb:${r.id}`} target={target(r)}>
+                  <button
+                    onClick={() => select(r.id)}
+                    aria-current={r.id === currentId ? "location" : undefined}
+                  >
+                    {r.title}
+                  </button>
+                </DropZone>
               </span>
             ))}
           </nav>
@@ -312,10 +343,11 @@ export default function ProjectStructure(props: Props) {
             {children.map((r) => {
               const Icon = icon(r.kind);
               return (
-                <article
-                  className="structure-item"
+                <StructureItem
                   key={r.id}
-                  data-resource-id={r.id}
+                  resource={r}
+                  canDrag={canEdit && !r.data.archived}
+                  target={target(r)}
                 >
                   <div className="structure-item-main">
                     <Icon size={18} />
@@ -364,7 +396,7 @@ export default function ProjectStructure(props: Props) {
                       </>
                     )}
                   </div>
-                </article>
+                </StructureItem>
               );
             })}
           </div>
@@ -392,11 +424,15 @@ export default function ProjectStructure(props: Props) {
       {moving && (
         <MoveStructure
           resource={moving}
+          initialDestination={moveTo}
           resources={resources}
           workspace={workspace}
           ready={command.ready}
           refresh={refresh}
-          close={() => setMoving(null)}
+          close={() => {
+            setMoving(null);
+            setMoveTo(undefined);
+          }}
           confirm={async (preview) => {
             setError("");
             await command.run(`/workspaces/${workspace.id}/hierarchy/move`, {
@@ -547,6 +583,7 @@ function CreateStructure({
 }
 function MoveStructure({
   resource,
+  initialDestination,
   resources,
   workspace,
   ready,
@@ -555,6 +592,7 @@ function MoveStructure({
   confirm,
 }: {
   resource: Resource;
+  initialDestination?: string | null;
   resources: Resource[];
   workspace: Workspace;
   ready: boolean;
@@ -563,7 +601,9 @@ function MoveStructure({
   confirm: (preview: MovePreview) => Promise<void>;
 }) {
   const [destination, setDestination] = useState(
-      structureParent(resource) || "",
+      initialDestination !== undefined
+        ? initialDestination || ""
+        : structureParent(resource) || "",
     ),
     [preview, setPreview] = useState<MovePreview | null>(null),
     [busy, setBusy] = useState(false),
@@ -571,6 +611,21 @@ function MoveStructure({
   const excluded = new Set(
     structureBranch(resource.id, resources).map((r) => r.id),
   );
+  useEffect(() => {
+    if (initialDestination === undefined || !navigator.onLine) return;
+    let current = true;
+    setBusy(true);
+    api<MovePreview>(
+      `/workspaces/${workspace.id}/hierarchy/preview`,
+      send({ id: resource.id, destinationId: initialDestination || null }),
+    )
+      .then((value) => current && setPreview(value))
+      .catch((e) => current && setError((e as Error).message))
+      .finally(() => current && setBusy(false));
+    return () => {
+      current = false;
+    };
+  }, []);
   return (
     <Modal title={`Mover ${resource.title}`} close={close}>
       <div className="modal-body">
@@ -661,5 +716,64 @@ function MoveStructure({
         </div>
       </div>
     </Modal>
+  );
+}
+
+/** Wraps a location so structure items can be dropped on it. */
+function DropZone({
+  id,
+  target,
+  children,
+}: {
+  id: string;
+  target: { accepts: (item: DragItem) => boolean; drop: (item: DragItem) => void };
+  children: ReactNode;
+}) {
+  const drop = useDrop(id, target);
+  return (
+    <span ref={drop.ref} className={`drop-zone ${drop.over ? "drop-over" : ""} ${drop.armed ? "drop-armed" : ""}`}>
+      {children}
+    </span>
+  );
+}
+/** A structure row: drag it by its grip onto a folder, project, the path or the root. */
+function StructureItem({
+  resource,
+  canDrag,
+  target,
+  children,
+}: {
+  resource: Resource;
+  canDrag: boolean;
+  target: { accepts: (item: DragItem) => boolean; drop: (item: DragItem) => void };
+  children: ReactNode;
+}) {
+  const drag = useDrag(
+    `structure:${resource.id}`,
+    { type: "structure", resource, label: resource.title },
+    !canDrag,
+  );
+  const drop = useDrop(`structure-into:${resource.id}`, target);
+  return (
+    <article
+      ref={(node) => {
+        drag.ref(node);
+        drop.ref(node);
+      }}
+      className={`structure-item ${drag.dragging ? "dragging" : ""} ${drop.over ? "drop-over" : ""}`}
+      data-resource-id={resource.id}
+    >
+      {canDrag && (
+        <button
+          className="drag-grip"
+          aria-label={`Arrastrar ${resource.title}`}
+          title="Arrastra sobre una carpeta, un proyecto o la ruta para moverlo"
+          {...drag.handle}
+        >
+          <GripVertical size={15} />
+        </button>
+      )}
+      {children}
+    </article>
   );
 }

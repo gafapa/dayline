@@ -1,3 +1,4 @@
+import { useDrag, useDrop } from "./dnd";
 import { stateLabel } from "../shared/workflow";
 import { ConfiguredTaskFields } from "./CustomFieldInputs";
 import {
@@ -5,8 +6,8 @@ import {
   customFieldValueSchema,
   type CustomFieldValue,
 } from "../shared/custom-fields";
-import { useCallback, useEffect, useRef, useState, useId } from "react";
-import { ArrowUp, ArrowDown, Plus, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, useId, type ReactNode } from "react";
+import { ArrowUp, ArrowDown, GripVertical, Plus, Trash2 } from "lucide-react";
 import { api, send } from "./api";
 import { Field } from "./components/Primitives";
 import { flushOutbox, readUserDraft, writeUserDraft } from "./storage";
@@ -596,7 +597,20 @@ function SprintPlan({
           const task = tasks.get(id);
           return (
             task && (
-              <div className="sprint-plan-task" key={id}>
+              <PlanRow
+                key={id}
+                task={task}
+                enabled={plan.canEdit && !closed}
+                insert={(item) => {
+                  versions.current.set(item.id, item.version);
+                  setSelected((current) => {
+                    const rest = current.filter((taskId) => taskId !== item.id);
+                    rest.splice(rest.indexOf(id), 0, item.id);
+                    return rest;
+                  });
+                  setDirty(true);
+                }}
+              >
                 <div>
                   <button className="text-button" onClick={() => open(task)}>
                     {task.title}
@@ -635,10 +649,30 @@ function SprintPlan({
                     </button>
                   </div>
                 )}
-              </div>
+              </PlanRow>
             )
           );
         })}
+        {plan.canEdit && !closed && (
+          <PlanBacklog
+            candidates={plan.candidates.filter(
+              (task: Resource) => !selected.includes(task.id),
+            )}
+            add={(item) => {
+              versions.current.set(item.id, item.version);
+              setSelected((current) => [
+                ...current.filter((taskId) => taskId !== item.id),
+                item.id,
+              ]);
+              setDirty(true);
+            }}
+            remove={(item) => {
+              setSelected((current) => current.filter((taskId) => taskId !== item.id));
+              setDirty(true);
+            }}
+            inPlan={(taskId) => selected.includes(taskId)}
+          />
+        )}
         {plan.canEdit && (
           <Field label="Añadir tarea al sprint">
             <select
@@ -1820,5 +1854,106 @@ function SprintChart({
         ))}
       </div>
     </figure>
+  );
+}
+
+/** A planned task: drag to reorder; dropping another task here places it just before. */
+function PlanRow({
+  task,
+  enabled,
+  insert,
+  children,
+}: {
+  task: Resource;
+  enabled: boolean;
+  insert: (task: Resource) => void;
+  children: ReactNode;
+}) {
+  const drag = useDrag(`plan:${task.id}`, { type: "task", task, label: task.title }, !enabled);
+  const drop = useDrop(
+    `plan-before:${task.id}`,
+    {
+      accepts: (item) => item.type === "task" && item.task.id !== task.id,
+      drop: (item) => {
+        if (item.type === "task") insert(item.task);
+      },
+    },
+    !enabled,
+  );
+  return (
+    <div
+      ref={(node) => {
+        drag.ref(node);
+        drop.ref(node);
+      }}
+      className={`sprint-plan-task ${drag.dragging ? "dragging" : ""} ${drop.over ? "drop-before" : ""}`}
+    >
+      {enabled && (
+        <span className="drag-grip" aria-label={`Arrastrar ${task.title}`} {...drag.handle}>
+          <GripVertical size={15} />
+        </span>
+      )}
+      {children}
+    </div>
+  );
+}
+/** Unplanned work: drag into the sprint to add it at the end, or drop a planned task here to remove it. */
+function PlanBacklog({
+  candidates,
+  add,
+  remove,
+  inPlan,
+}: {
+  candidates: Resource[];
+  add: (task: Resource) => void;
+  remove: (task: Resource) => void;
+  inPlan: (id: string) => boolean;
+}) {
+  const end = useDrop("plan-end", {
+    accepts: (item) => item.type === "task" && !inPlan(item.task.id),
+    drop: (item) => {
+      if (item.type === "task") add(item.task);
+    },
+  });
+  const backlog = useDrop("plan-backlog", {
+    accepts: (item) => item.type === "task" && inPlan(item.task.id),
+    drop: (item) => {
+      if (item.type === "task") remove(item.task);
+    },
+  });
+  return (
+    <>
+      <div ref={end.ref} className={`sprint-plan-end ${end.over ? "drop-over" : ""} ${end.armed ? "drop-armed" : ""}`}>
+        Suelta aquí para añadir al final del sprint
+      </div>
+      <div
+        ref={backlog.ref}
+        className={`sprint-backlog ${backlog.over ? "drop-over" : ""}`}
+        aria-label="Trabajo pendiente"
+      >
+        <h4>
+          Trabajo pendiente <small>{candidates.length}</small>
+        </h4>
+        <p className="muted">
+          Arrastra tareas al sprint, o suelta aquí una tarea planificada para
+          sacarla.
+        </p>
+        <div>
+          {candidates.slice(0, 40).map((task) => (
+            <BacklogChip key={task.id} task={task} />
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+function BacklogChip({ task }: { task: Resource }) {
+  const drag = useDrag(`backlog:${task.id}`, { type: "task", task, label: task.title });
+  return (
+    <span ref={drag.ref} className={`backlog-chip ${drag.dragging ? "dragging" : ""}`} {...drag.handle}>
+      <GripVertical size={13} />
+      {task.title}
+      {task.data.estimate ? <small>{task.data.estimate} pt</small> : null}
+    </span>
   );
 }

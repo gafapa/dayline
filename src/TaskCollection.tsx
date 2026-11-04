@@ -56,6 +56,7 @@ export default function TaskCollection({
 }) {
   const [config, setConfig] = useState<TaskViewConfig>(() => ({
     ...defaultTaskView(),
+    layout: "board",
     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   }));
   const [viewId, setViewId] = useState(""),
@@ -445,7 +446,7 @@ export default function TaskCollection({
               {options(
                 ["order", "updated", "due", "priority", "estimate", "title"],
                 {
-                  order: "Orden de planificación",
+                  order: "Orden manual (arrastrando)",
                   updated: "Última actualización",
                   due: "Fecha límite",
                   priority: "Prioridad",
@@ -507,7 +508,11 @@ export default function TaskCollection({
             className="text-button"
             onClick={() => {
               setViewId("");
-              setConfig(defaultTaskView());
+              setConfig({
+                ...defaultTaskView(),
+                layout: config.layout,
+                timeZone: config.timeZone,
+              });
               setLimit(100);
             }}
           >
@@ -757,6 +762,7 @@ export default function TaskCollection({
             selected={selected}
             toggle={toggle}
             fieldColumns={config.fieldColumns}
+            orderable={config.sortBy === "order" && config.direction === "asc"}
           />
         </section>
       ))}
