@@ -44,14 +44,26 @@ export function useDraft(
       disposed = true;
     };
   }, [userId, key, enabled]);
+  // Writes run in order; after clear() no write lands until the form is clean again,
+  // so a write started just before saving can't resurrect a stale draft.
+  const queue = useRef<Promise<unknown>>(Promise.resolve()),
+    suppressed = useRef(false);
+  useEffect(() => {
+    if (!dirty) suppressed.current = false;
+  }, [dirty]);
   const serialized = JSON.stringify(snapshot);
   useEffect(() => {
-    if (!ready || !dirty || !enabled) return;
+    if (!ready || !dirty || !enabled || suppressed.current) return;
     let disposed = false;
     setSaved(false);
-    void writeUserDraft(userId, key, JSON.parse(serialized), true)
+    queue.current = queue.current
+      .then(() =>
+        suppressed.current
+          ? undefined
+          : writeUserDraft(userId, key, JSON.parse(serialized), true),
+      )
       .then(() => {
-        if (!disposed) setSaved(true);
+        if (!disposed && !suppressed.current) setSaved(true);
       })
       .catch(() => {
         if (!disposed)
@@ -64,7 +76,12 @@ export function useDraft(
     };
   }, [userId, key, serialized, dirty, ready, enabled]);
   const clear = async () => {
-    await removeUserDraft(userId, key);
+    suppressed.current = true;
+    const removal = queue.current
+      .catch(() => {})
+      .then(() => removeUserDraft(userId, key));
+    queue.current = removal;
+    await removal;
     setIssue("");
     setSaved(false);
     setReadyKey(scope);
