@@ -1012,3 +1012,26 @@
 .sidebar .nav-section > .nav-group, .sidebar .project-nav > .nav-group { margin: 6px 10px 6px; text-transform: uppercase; letter-spacing: .06em; font-size: 11px; font-weight: 600; }
 .sidebar .project-nav { margin: 10px 0 0; }
 .sidebar .nav-all-projects { color: var(--sidebar-muted); }
+/* Compact task collection: one-line typed filter, dense rows, floating bulk bar. */
+.collection-filter-line .field input { min-height: 42px; font-size: 14px; }
+.task-row { min-height: 48px; }
+.task-row .task-name { padding-top: 4px; padding-bottom: 4px; }
+.bulk-controls[aria-label="Edición por lotes"] {
+  position: sticky;
+  bottom: 12px;
+  z-index: 6;
+  align-items: center;
+  gap: 10px 12px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--sidebar);
+  color: #fff;
+  box-shadow: 0 12px 32px rgba(30, 27, 75, 0.3);
+}
+.bulk-controls[aria-label="Edición por lotes"] > strong,
+.bulk-controls[aria-label="Edición por lotes"] > p { flex-basis: auto; color: #fff; }
+.bulk-controls[aria-label="Edición por lotes"] .field { color: #eceaff; min-width: 150px; }
+.bulk-controls[aria-label="Edición por lotes"] .field select,
+.bulk-controls[aria-label="Edición por lotes"] .field input { min-height: 38px; }
+.bulk-controls[aria-label="Edición por lotes"] .muted { color: var(--sidebar-muted); }

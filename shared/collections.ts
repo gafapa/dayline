@@ -229,3 +229,73 @@ export function rewriteDocument(
   }
   return transform(result);
 }
+
+/* Typed filter: "estado:hecho @lucia vence:semana #api prioridad:alta texto libre". */
+const fold = (value: string) =>
+  value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const statusWords: Record<string, (typeof collectionStatuses)[number]> = {
+  backlog: "backlog", pendiente: "backlog", "por-hacer": "todo", porhacer: "todo", todo: "todo",
+  "en-curso": "in_progress", encurso: "in_progress", curso: "in_progress", desarrollo: "in_progress",
+  revision: "review", "en-revision": "review", hecho: "done", hecha: "done", completada: "done",
+  cancelada: "cancelled", cancelado: "cancelled",
+};
+const dueWords: Record<string, TaskViewConfig["due"]> = {
+  hoy: "today", semana: "week", vencidas: "overdue", vencida: "overdue", sin: "undated", "sin-fecha": "undated",
+};
+const priorityWords: Record<string, (typeof priorities)[number]> = {
+  ninguna: "none", baja: "low", media: "medium", alta: "high", urgente: "urgent",
+};
+export type TypedFilter = Pick<
+  TaskViewConfig,
+  "query" | "statuses" | "assignees" | "due" | "labels" | "priorities"
+>;
+/** Turns the one-line filter into view fields; unknown tokens stay as free text. */
+export function parseTaskQuery(
+  text: string,
+  members: { id: string; name: string }[] = [],
+): TypedFilter {
+  const result: TypedFilter = { query: "", statuses: [], assignees: [], due: "any", labels: [], priorities: [] };
+  const free: string[] = [];
+  const push = <T,>(list: T[], value: T) => {
+    if (!list.includes(value)) list.push(value);
+  };
+  for (const token of text.trim().split(/\s+/).filter(Boolean)) {
+    const word = fold(token);
+    const [key, ...rest] = word.split(":");
+    const value = rest.join(":");
+    if (key === "estado" && statusWords[value]) push(result.statuses, statusWords[value]);
+    else if (key === "vence" && dueWords[value]) result.due = dueWords[value];
+    else if (key === "prioridad" && priorityWords[value]) push(result.priorities, priorityWords[value]);
+    else if (word.startsWith("#") && word.length > 1) push(result.labels, token.slice(1));
+    else if (word.startsWith("@") && word.length > 1) {
+      const name = word.slice(1);
+      const member =
+        name === "yo" ? "me" : name === "nadie" ? "unassigned"
+        : members.find((m) => fold(m.name).replace(/\s+/g, "").startsWith(name) || fold(m.name).split(/\s+/).includes(name))?.id;
+      if (member) push(result.assignees, member);
+      else free.push(token);
+    } else free.push(token);
+  }
+  result.query = free.join(" ");
+  return result;
+}
+/** The one-line filter text for a view's fields (inverse of parseTaskQuery). */
+export function formatTaskQuery(
+  config: TypedFilter,
+  members: { id: string; name: string }[] = [],
+) {
+  const word = (map: Record<string, string>, value: string) =>
+    Object.entries(map).find(([, v]) => v === value)?.[0];
+  const parts = [
+    ...config.statuses.map((s) => `estado:${word(statusWords, s)}`),
+    ...config.assignees.map((a) =>
+      a === "me" ? "@yo" : a === "unassigned" ? "@nadie"
+      : `@${fold(members.find((m) => m.id === a)?.name.split(/\s+/)[0] || a)}`,
+    ),
+    ...(config.due !== "any" ? [`vence:${word(dueWords, config.due)}`] : []),
+    ...config.priorities.map((p) => `prioridad:${word(priorityWords, p)}`),
+    ...config.labels.map((l) => `#${l}`),
+    config.query,
+  ];
+  return parts.filter(Boolean).join(" ");
+}

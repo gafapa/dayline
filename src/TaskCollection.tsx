@@ -1,5 +1,5 @@
 import { stateLabel } from "../shared/workflow";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useServerCommand } from "./useServerCommand";
 import { Field, Modal } from "./components/Primitives";
 import TaskView from "./TaskView";
@@ -16,6 +16,8 @@ import {
   taskTypes,
   taskViewSchema,
   type TaskViewConfig,
+  formatTaskQuery,
+  parseTaskQuery,
 } from "../shared/collections";
 import {
   statusLabels,
@@ -59,6 +61,31 @@ export default function TaskCollection({
     layout: "board",
     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   }));
+  const [filterText, setFilterText] = useState(() =>
+    formatTaskQuery(config, members),
+  );
+  const typed = JSON.stringify([
+    config.query,
+    config.statuses,
+    config.assignees,
+    config.due,
+    config.labels,
+    config.priorities,
+  ]);
+  useEffect(() => {
+    // Saved views and the selects below also change these fields: rewrite the text.
+    const current = parseTaskQuery(filterText, members);
+    const fields = {
+      query: config.query,
+      statuses: config.statuses,
+      assignees: config.assignees,
+      due: config.due,
+      labels: config.labels,
+      priorities: config.priorities,
+    };
+    if (JSON.stringify(current) !== JSON.stringify(fields))
+      setFilterText(formatTaskQuery(fields, members));
+  }, [typed]);
   const [viewId, setViewId] = useState(""),
     [notice, setNotice] = useState(""),
     [error, setError] = useState(""),
@@ -300,16 +327,23 @@ export default function TaskCollection({
           ))}
         </div>
       </div>
-      <div className="collection-filters">
+      <div className="collection-filter-line">
         <Field label="Buscar tareas">
           <input
             type="search"
-            value={config.query}
-            onChange={(e) => patch({ query: e.target.value })}
-            placeholder="Título, descripción o etiqueta"
+            value={filterText}
+            onChange={(e) => {
+              setFilterText(e.target.value);
+              patch(parseTaskQuery(e.target.value, members));
+            }}
+            placeholder="Filtra escribiendo: estado:hecho @yo vence:semana #etiqueta prioridad:alta"
           />
         </Field>
-        <Field label="Filtrar por estado">
+      </div>
+      <details className="collection-advanced">
+        <summary>Más filtros y ordenación</summary>
+        <div className="collection-filters">
+          <Field label="Filtrar por estado">
           <select
             value={config.statuses[0] || ""}
             onChange={(e) =>
@@ -319,8 +353,8 @@ export default function TaskCollection({
             <option value="">Todos los estados</option>
             {options(taskStatuses, statusLabels)}
           </select>
-        </Field>
-        <Field label="Filtrar por responsable">
+          </Field>
+          <Field label="Filtrar por responsable">
           <select
             value={config.assignees[0] || ""}
             onChange={(e) =>
@@ -336,11 +370,7 @@ export default function TaskCollection({
               </option>
             ))}
           </select>
-        </Field>
-      </div>
-      <details className="collection-advanced">
-        <summary>Más filtros y ordenación</summary>
-        <div className="collection-filters">
+          </Field>
           <Field label="Proyecto de la vista">
             <select
               value={config.projectIds[0] || ""}

@@ -76,6 +76,15 @@ try {
   await drag(row(t1).getByRole('button', { name: `Arrastrar ${t1.title}`, exact: true }), row(t3), { position: { y: 6 } });
   await expect.poll(async () => { const a = await find(ws, t1.id), b = await find(ws, t3.id); return typeof a.data.order === 'number' && typeof b.data.order === 'number' && a.data.order < b.data.order; }).toBe(true);
 
+  phase = 'typed filter';
+  const search = page.getByLabel('Buscar tareas', { exact: true });
+  await search.fill('estado:en-curso');
+  await expect(page.locator('.task-row')).toHaveCount(1);
+  await expect(page.locator('.task-row')).toContainText(t1.title);
+  await search.fill(`@yo ${suffix}`);
+  await expect(page.locator('.task-row')).toHaveCount(4);
+  await page.screenshot({ path: 'docs/evidence/typed-filter-1440.png' });
+  await search.fill('');
   phase = 'calendar: give a date and move it';
   await page.setViewportSize({ width: 1440, height: 1400 });
   await openSection(page, 'Calendario');
@@ -167,7 +176,7 @@ try {
   await page.screenshot({ path: 'docs/evidence/dnd-board-390.png' });
 
   assert.equal(errors.length, 0, errors.join('\n'));
-  await writeFile('docs/evidence/dnd-check.json', JSON.stringify({ verifiedAt: new Date().toISOString(), syntheticData: true, checks: { boardDefault: true, boardColumnMove: true, boardReorder: true, sidebarProjectDrop: true, favoritesReorder: true, listReorder: true, calendarDate: true, calendarUndate: true, sprintPlanDrag: true, structureMoveReview: true, attachmentFileDrop: true, documentBlockMove: true, documentImageDrop: true }, pageErrors: errors }, null, 2));
+  await writeFile('docs/evidence/dnd-check.json', JSON.stringify({ verifiedAt: new Date().toISOString(), syntheticData: true, checks: { boardDefault: true, boardColumnMove: true, boardReorder: true, sidebarProjectDrop: true, favoritesReorder: true, listReorder: true, calendarDate: true, calendarUndate: true, sprintPlanDrag: true, structureMoveReview: true, attachmentFileDrop: true, typedFilter: true, documentBlockMove: true, documentImageDrop: true }, pageErrors: errors }, null, 2));
   console.info('Drag and drop verified on the board, list, sidebar, calendar, sprint plan, structure, attachments and documents.');
 } catch (error) {
   console.error('Failed phase:', phase);
