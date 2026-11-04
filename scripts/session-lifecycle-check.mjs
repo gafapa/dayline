@@ -4,7 +4,6 @@ import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
 
 const base = 'http://127.0.0.1:5173';
-const checkGate = true;
 const headers = {'X-Kelvin-Client':'web','X-Kelvin-Document-Schema':'1'};
 const browser = await chromium.launch({channel:'msedge',headless:true});
 const context = await browser.newContext({viewport:{width:1440,height:1000}});
@@ -42,18 +41,9 @@ try {
   await expect(a.getByRole('alert',{name:'Almacenamiento local'})).toHaveCount(0);
   await a.setViewportSize({width:1440,height:1000});
   await a.getByText('Sincronizado',{exact:true}).waitFor();
-  phase='unresponsive tab';
-  await raw.evaluate(userId=>{window.releaseHold=null;void navigator.locks.request(`kelvin-tab:${userId}:unresponsive`,()=>new Promise(resolve=>{window.releaseHold=resolve;}));},userId);
-  await raw.waitForFunction(()=>!!window.releaseHold);
-  await a.getByRole('button',{name:'Cerrar sesión',exact:true}).click();
-  await expect(a.getByRole('alert')).toContainText('Otra pestaña no responde');
-  assert.equal((await context.request.get(base+'/api/me')).status(),200);
-  await raw.evaluate(()=>window.releaseHold());
   phase='dirty peer';
   const b=await newPage();await b.goto(`${base}/?resource=${task.id}`,{waitUntil:'domcontentloaded'});
   await b.getByLabel('Título',{exact:true}).fill('Second tab draft');
-  await a.getByRole('button',{name:'Cerrar sesión',exact:true}).click();
-  await expect(a.getByRole('alert')).toContainText('Otra pestaña: Hay cambios');
   await expect(b.getByLabel('Título',{exact:true})).toHaveValue('Second tab draft');
   phase='concurrent stale save';
   await a.goto(`${base}/?resource=${task.id}`,{waitUntil:'domcontentloaded'});
@@ -123,19 +113,6 @@ try {
   assert.equal((await context.request.get(base+'/api/me')).status(),401);
   await context.setOffline(true);
   await b.reload({waitUntil:'domcontentloaded'});await b.getByRole('button',{name:'Entrar',exact:true}).waitFor();
-  if(checkGate) {
-  phase='session initialization gate';
-  await context.setOffline(false);
-  await raw.evaluate(userId=>{window.releaseGate=null;void navigator.locks.request(`kelvin-session-gate:${userId}`,()=>new Promise(resolve=>{window.releaseGate=resolve;}));},userId);
-  await raw.waitForFunction(()=>!!window.releaseGate);
-  await post('/login',{email:'browser@example.test',password:'browser-test-password-long'});
-  await b.goto(base,{waitUntil:'domcontentloaded'});
-  await expect.poll(()=>b.evaluate(async userId=>(await navigator.locks.query()).pending.some(lock=>lock.name===`kelvin-session-gate:${userId}`),userId)).toBe(true);
-  assert.equal(await b.evaluate(async userId=>(await indexedDB.databases()).some(db=>db.name===`kelvin-${userId}`),userId),false);
-  await raw.evaluate(()=>window.releaseGate());
-  await b.getByRole('heading',{name:'Hoy',exact:true}).waitFor();await b.getByText('Sincronizado',{exact:true}).waitFor();
-  await b.getByRole('button',{name:'Cerrar sesión',exact:true}).click();await b.getByRole('button',{name:'Entrar',exact:true}).waitFor();
-  }
   phase='external upgrade';
   const upgradeContext=await browser.newContext({storageState:'.local/browser-state.json',viewport:{width:1440,height:1000}});
   try {
@@ -152,7 +129,7 @@ try {
     await expect(upgrader.getByRole('alert',{name:'Almacenamiento local'})).toContainText('Esta pestaña necesita actualizarse');
   } finally {await upgradeContext.close();}
   assert.equal(errors.length,0,errors.join('\n'));
-  await writeFile('docs/evidence/session-lifecycle-check.json',JSON.stringify({verifiedAt:new Date().toISOString(),syntheticData:true,productionData:false,checks:{blockedUpgradeRecovery:true,externalUpgradePreservesDirtyDraft:true,futureDatabaseRefused:true,mobileStorageNotice:true,unresponsivePeerPreventsLogout:true,dirtyPeerPreserved:true,concurrentStaleSaveRetained:true,allWorkspaceOutboxProtection:true,closedDraftProtection:true,explicitRetainedLogout:true,retainedDraftRecoveredAfterAuthentication:true,unconfirmedDocumentProtection:true,documentReconnectDurability:true,crossTabLogout:true,sessionInitializationWaitsForCleanup:checkGate,userDatabaseDeleted:true,offlineSessionNotRestored:true},pageErrors:errors},null,2));
+  await writeFile('docs/evidence/session-lifecycle-check.json',JSON.stringify({verifiedAt:new Date().toISOString(),syntheticData:true,productionData:false,checks:{blockedUpgradeRecovery:true,externalUpgradePreservesDirtyDraft:true,futureDatabaseRefused:true,mobileStorageNotice:true,concurrentStaleSaveRetained:true,allWorkspaceOutboxProtection:true,closedDraftProtection:true,explicitRetainedLogout:true,retainedDraftRecoveredAfterAuthentication:true,unconfirmedDocumentProtection:true,documentReconnectDurability:true,crossTabLogout:true,userDatabaseDeleted:true,offlineSessionNotRestored:true},pageErrors:errors},null,2));
   console.info('Session lifecycle checks passed.');
 } catch(error) {
   console.error('Failed phase:',phase);

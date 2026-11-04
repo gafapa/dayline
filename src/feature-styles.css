@@ -612,7 +612,6 @@
 .local-storage-notice { position: fixed; z-index: 100; inset: auto 1rem 1rem; max-width: 42rem; margin-inline: auto; padding: 1rem; border: 1px solid var(--border); border-radius: .75rem; background: var(--surface); color: var(--text); box-shadow: 0 8px 32px #0002; }
 .local-storage-notice p { margin-block: .5rem; line-height: 1.5; }
 .local-storage-notice button { min-height: 44px; }
-.session-status { padding: 1.5rem; max-width: min(30rem, calc(100vw - 2rem)); }
 
 .time-workspace {display:grid;gap:1.5rem;min-width:0;}
 .time-heading,.time-actions,.time-running-row {display:flex;gap:1rem;align-items:center;flex-wrap:wrap;}

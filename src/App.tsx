@@ -1,4 +1,4 @@
-import { authorizeLocalUser, withLocalSessionGate } from "./local-lifecycle";
+import { authorizeLocalUser } from "./local-lifecycle";
 import { DragProvider, useDrag, useDrop } from "./dnd";
 import { useLocalGuard } from "./useLocalGuard";
 import { coordinateLocalSession, signOutEverywhereLocal, LocalWorkRetained } from "./session-coordination";
@@ -379,15 +379,10 @@ export default function App() {
     try {
       const session = await api("/me");
       if (generation !== localStorage.getItem("kelvin-auth-generation")) return;
-      await withLocalSessionGate(session.user.id, async () => {
-        if (generation !== localStorage.getItem("kelvin-auth-generation"))
-          return;
-        authorizeLocalUser(session.user.id);
-        await rememberSession(session);
-        if (generation !== localStorage.getItem("kelvin-auth-generation"))
-          return;
-        apply(session);
-      });
+      authorizeLocalUser(session.user.id);
+      await rememberSession(session);
+      if (generation !== localStorage.getItem("kelvin-auth-generation")) return;
+      apply(session);
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) await forgetSession();
       else if (!(e instanceof ApiError)) {

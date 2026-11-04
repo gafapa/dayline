@@ -38,9 +38,9 @@ const databaseConnection = (userId: string) => {
   return connection;
 };
 const database = async (userId: string) => {
-  assertLocalSession(userId, true);
+  assertLocalSession(userId);
   const db = await databaseConnection(userId);
-  assertLocalSession(userId, true);
+  assertLocalSession(userId);
   return db;
 };
 const sessionDatabase = () =>
