@@ -121,7 +121,11 @@ export default function Today({
       .filter((r) => r.data.timeLog.date === today)
       .reduce((sum, r) => sum + elapsed(r), 0);
   const unread = live.filter(
-    (r) => r.kind === "notification" && r.data.assigneeId === user.id && !r.data.read,
+    (r) =>
+      r.kind === "notification" &&
+      r.data.assigneeId === user.id &&
+      !r.data.read &&
+      !(r.data.snoozedUntil && Date.parse(r.data.snoozedUntil) > Date.now()),
   );
   const reminders = live
     .filter(
@@ -198,13 +202,28 @@ export default function Today({
             </p>
           )}
           {groups
-            .filter((g) => g.items.length)
+            .filter((g) => g.items.length || (g.id === "today" && reminders.length))
             .map((group) => (
               <div key={group.id} className="today-group">
                 <h3 className={`today-group-title ${group.tone}`}>
-                  <span>{group.label} · {group.items.length}</span>
+                  <span>
+                    {group.label} ·{" "}
+                    {group.items.length + (group.id === "today" ? reminders.length : 0)}
+                  </span>
                 </h3>
                 <ul>
+                  {group.id === "today" &&
+                    reminders.map((r) => (
+                      <li key={r.id} className="today-task today-reminder">
+                        <span className="today-time-label">{timeOf(r.data.reminder.at)}</span>
+                        <button className="today-task-main" onClick={() => open(r)}>
+                          <strong>{r.title}</strong>
+                          <small>
+                            <Bell size={12} /> Recordatorio
+                          </small>
+                        </button>
+                      </li>
+                    ))}
                   {group.items.slice(0, 8).map((task) => (
                     <li key={task.id} className="today-task">
                       {canEdit && (
@@ -299,30 +318,6 @@ export default function Today({
             )}
           </section>
 
-          <section className="today-card today-reminders" aria-labelledby="today-reminders-title">
-            <div className="today-card-head">
-              <h2 id="today-reminders-title">Recordatorios de hoy</h2>
-              <button className="text-button" onClick={() => navigate("reminders")}>
-                Todos
-              </button>
-            </div>
-            {reminders.length ? (
-              <ul>
-                {reminders.map((r) => (
-                  <li key={r.id}>
-                    <button className="today-row" onClick={() => open(r)}>
-                      <span className="today-time">{timeOf(r.data.reminder.at)}</span>
-                      <span>{r.title}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="muted">
-                <Bell size={14} /> Sin recordatorios para hoy.
-              </p>
-            )}
-          </section>
 
           {sprint && (
             <section className="today-card" aria-labelledby="today-sprint-title">

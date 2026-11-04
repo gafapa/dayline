@@ -1035,3 +1035,28 @@
 .bulk-controls[aria-label="Edición por lotes"] .field select,
 .bulk-controls[aria-label="Edición por lotes"] .field input { min-height: 38px; }
 .bulk-controls[aria-label="Edición por lotes"] .muted { color: var(--sidebar-muted); }
+/* Inbox triage. */
+.triage { display: flex; flex-direction: column; gap: 22px; max-width: 920px; }
+.triage-heading { margin: 0 0 6px; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.triage-heading span { font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--blue-tint); color: var(--blue-ink); }
+.triage-empty { display: flex; align-items: center; gap: 6px; }
+.triage-item { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 12px; padding: 12px 0; border-top: 1px solid var(--rule); }
+.triage-item.done { opacity: 0.7; }
+.triage-kind { align-self: start; margin-top: 2px; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--gray-tint); color: var(--gray-ink); white-space: nowrap; }
+.triage-kind.kind-task { background: var(--blue-tint); color: var(--blue-ink); }
+.triage-kind.kind-document { background: var(--violet-tint); color: var(--violet-ink); }
+.triage-kind.kind-comment { background: var(--pink-tint); color: var(--pink-ink); }
+.triage-kind.kind-sprint { background: var(--teal-tint); color: var(--teal-ink); }
+.triage-text { min-width: 0; }
+.triage-text strong { font-weight: 600; }
+.triage-text p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+.triage-text small { color: var(--muted); font-size: 12px; }
+.triage-actions { grid-column: 2; display: flex; flex-wrap: wrap; gap: 6px; }
+.triage-actions button { min-height: 36px; font-size: 13px; }
+@media (max-width: 650px) {
+  .triage-item { grid-template-columns: 1fr; }
+  .triage-actions { grid-column: 1; }
+  .triage-actions button { flex: 1 1 auto; }
+}
+.today-time-label { width: 44px; margin-left: 0; flex: none; font-variant-numeric: tabular-nums; font-size: 12px; font-weight: 700; color: var(--amber-ink); background: var(--amber-tint); border-radius: 7px; padding: 3px 0; text-align: center; }
+.today-reminder .today-task-main small { display: flex; align-items: center; gap: 4px; }

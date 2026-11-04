@@ -139,6 +139,8 @@ export const resourceDataSchema = z
     url: z.string().url().max(1000).or(z.literal("")).optional(),
     resolved: z.boolean().optional(),
     read: z.boolean().optional(),
+    /** Notification hidden from the inbox until this instant. */
+    snoozedUntil: z.string().datetime({ offset: true }).optional(),
     reminder: reminderSchema.optional(),
     recurrence: z.enum(["none", "daily", "weekly", "monthly"]).optional(),
     recurrenceDay: z.number().int().min(1).max(31).optional(),

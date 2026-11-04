@@ -113,8 +113,11 @@ export async function applyMutation(
   if (role === "viewer") {
     const before = { ...existing?.data },
       after = { ...input.data };
-    delete before.read;
-    delete after.read;
+    // Readers may still triage their own notifications: read and snooze.
+    for (const key of ["read", "snoozedUntil"] as const) {
+      delete before[key];
+      delete after[key];
+    }
     if (
       !existing ||
       existing.kind !== "notification" ||

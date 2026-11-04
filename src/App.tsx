@@ -21,6 +21,7 @@ const WorkflowAdmin = lazy(() => import("./WorkflowAdmin"));
 const WorkspaceManager = lazy(() => import("./WorkspaceManager"));
 const PlatformAdmin = lazy(() => import("./PlatformAdmin"));
 const Setup = lazy(() => import("./Setup"));
+const InboxTriage = lazy(() => import("./Inbox"));
 import Today from "./Today";
 import { normalizeTaskState } from "../shared/workflow";
 import { Auth } from "./Auth";
@@ -453,9 +454,14 @@ export default function App() {
       setOnline(navigator.onLine);
       if (document.visibilityState === "visible") void refresh();
     };
-    // Retry queued changes even if an "online" event is missed or lands mid-sync.
+    // Retry queued changes every 10 s, and pick up server-side work (delivered reminders,
+    // other people's assignments) every 30 s while the tab is visible.
+    let ticks = 0;
     const retry = setInterval(() => {
-      if (navigator.onLine && pendingCount.current) void refresh();
+      ticks++;
+      if (!navigator.onLine) return;
+      if (pendingCount.current) void refresh();
+      else if (ticks % 3 === 0 && document.visibilityState === "visible") void refresh();
     }, 10000);
     window.addEventListener("online", wake);
     window.addEventListener("offline", wake);
@@ -473,6 +479,12 @@ export default function App() {
     if (!user || !workspaceId) return;
     const events = new EventSource(`/api/workspaces/${workspaceId}/events`);
     events.onmessage = () => void refresh();
+    // After a reconnect, catch up on anything announced while the stream was down.
+    let connectedOnce = false;
+    events.onopen = () => {
+      if (connectedOnce) void refresh();
+      connectedOnce = true;
+    };
     return () => events.close();
   }, [user?.id, workspaceId, refresh]);
   useEffect(() => {
@@ -1078,7 +1090,8 @@ export default function App() {
                             (r) =>
                               r.kind === "notification" &&
                               r.data.assigneeId === user.id &&
-                              !r.data.read,
+                              !r.data.read &&
+                              !(r.data.snoozedUntil && Date.parse(r.data.snoozedUntil) > Date.now()),
                           ).length
                         : 0;
                   const current = pages.includes(page) && !projectId;
@@ -1903,65 +1916,9 @@ export default function App() {
                 </div>
               )}
               {page === "inbox" && (
-                <>
-                  <div className="document-list">
-                    {active
-                      .filter(
-                        (r) =>
-                          r.kind === "notification" &&
-                          r.data.assigneeId === user.id,
-                      )
-                      .map((r) => (
-                        <div className="document-row" key={r.id}>
-                          <Bell size={18} />
-                          <div>
-                            <strong>{r.title}</strong>
-                            <p>{r.data.description}</p>
-                            {r.data.targetId &&
-                              active.find(
-                                (target) => target.id === r.data.targetId,
-                              ) && (
-                                <button
-                                  className="text-button"
-                                  onClick={() =>
-                                    openResource(
-                                      active.find(
-                                        (target) =>
-                                          target.id === r.data.targetId,
-                                      )!,
-                                    )
-                                  }
-                                >
-                                  Abrir elemento del aviso
-                                </button>
-                              )}
-                          </div>
-                          <button
-                            onClick={() =>
-                              void save({
-                                ...r,
-                                data: { ...r.data, read: true },
-                              })
-                            }
-                            disabled={r.data.read}
-                          >
-                            {r.data.read ? "Leída" : "Marcar leída"}
-                          </button>
-                        </div>
-                      ))}
-                  </div>
-                  {!active.some(
-                    (r) =>
-                      r.kind === "notification" &&
-                      r.data.assigneeId === user.id,
-                  ) && (
-                    <Empty
-                      icon={Inbox}
-                      title="Todo al día"
-                      description="Aquí encontrarás las novedades que requieren tu atención."
-                    />
-                  )}
-                </>
+                <Suspense fallback={<p role="status">Abriendo la bandeja…</p>}>
+                  <InboxTriage resources={active} user={user} save={save} open={openResource} />
+                </Suspense>
               )}
               {page === "templates" && (
                 <Suspense

@@ -20,7 +20,9 @@ export async function openSection(page, requested) {
   } else {
     const group = Object.entries(groups).find(([, pages]) => pages.includes(name))?.[0] || name;
     const sidebar = page.getByRole('navigation', { name: 'Principal' });
-    await sidebar.getByRole('button', { name: new RegExp(`^${group}( \d+)?$`) }).click();
+    // Sidebar buttons may carry a count ("Bandeja 3"). Escape regex characters in the label.
+    const label = group.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    await sidebar.getByRole('button', { name: new RegExp('^' + label + '( \\d+)?$') }).click();
     if (groups[group]?.[0] === name || group === name) return;
   }
   await page.getByRole('navigation', { name: 'Secciones' }).getByRole('button', { name, exact: true }).click();
