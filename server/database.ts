@@ -1,4 +1,5 @@
 import pg from "pg";
+import { migrateToGeneralProjects } from "./general-project.js";
 import { DOCUMENT_SCHEMA_VERSION } from "../shared/document-protocol.js";
 import { mkdir } from "node:fs/promises";
 
@@ -272,5 +273,6 @@ export async function migrate(db: Database) {
     await tx.query(
       "ALTER TABLE attachments ADD COLUMN IF NOT EXISTS template_node_key text",
     );
+    await migrateToGeneralProjects(tx);
   });
 }

@@ -1,4 +1,5 @@
 import { validatePersonalNote } from "./personal-notes.js";
+import { assignGeneralProject, protectGeneralProject } from "./general-project.js";
 import { validateWorkflowData } from "./workflow-validation.js";
 import * as Y from "yjs";
 import { initialDocument } from "../shared/document-seed.js";
@@ -50,7 +51,14 @@ export async function applyMutation(
     hierarchyMove?: boolean;
   } & FieldOptions = {},
 ) {
+  // Team work always belongs to a project (General when none is given).
+  const original = input.data.projectId;
+  input = await assignGeneralProject(tx, workspaceId, user.id, input);
   const all = options.graph || (await resources(tx, workspaceId));
+  if (options.graph && input.data.projectId !== original && !all.some((r) => r.id === input.data.projectId))
+    all.push(
+      (await tx.query<Resource>("SELECT * FROM resources WHERE id=$1", [input.data.projectId])).rows[0],
+    );
   if (input.data.documentSeedVersion !== undefined && input.kind !== "document")
     throw new HttpError(400, "El estado inicial pertenece a un documento.");
   if (
@@ -110,6 +118,12 @@ export async function applyMutation(
   }
   const existing =
     options.existing || all.find((r) => r.id === input.id && r.version > 0);
+  protectGeneralProject(existing, input);
+  // Only the server decides which project is General.
+  if (input.kind === "project" && !!input.data.general !== !!existing?.data.general) {
+    const { general: _ignored, ...data } = input.data;
+    input = { ...input, data: existing?.data.general ? { ...data, general: true } : data };
+  }
   if (role === "viewer") {
     const before = { ...existing?.data },
       after = { ...input.data };

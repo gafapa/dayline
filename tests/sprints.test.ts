@@ -827,7 +827,8 @@ test("publishing a task does not publish its earlier private sprint history or p
       memberCookie,
     )
   ).json().versions;
-  assert.ok(versions.every((entry: any) => !entry.snapshot.data.projectId));
+  // Versions visible to the member never reveal the private project (the task now sits in General).
+  assert.ok(versions.every((entry: any) => entry.snapshot.data.projectId !== project.id));
   assert.equal(
     (await request("GET", base(sprint.id) + "/planning")).json().baseline.tasks
       .length,

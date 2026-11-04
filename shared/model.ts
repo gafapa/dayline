@@ -141,6 +141,8 @@ export const resourceDataSchema = z
     read: z.boolean().optional(),
     /** Notification hidden from the inbox until this instant. */
     snoozedUntil: z.string().datetime({ offset: true }).optional(),
+    /** Marks the workspace's General project, home of work without another project. */
+    general: z.boolean().optional(),
     reminder: reminderSchema.optional(),
     recurrence: z.enum(["none", "daily", "weekly", "monthly"]).optional(),
     recurrenceDay: z.number().int().min(1).max(31).optional(),

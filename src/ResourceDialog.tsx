@@ -52,7 +52,10 @@ export function CreateDialog({
 }: any) {
   const [busy, setBusy] = useState(false),
     [localError, setLocalError] = useState("");
-  const [creationProject, setCreationProject] = useState(projectId || ""),
+  // Team work always lives in a project: default to the current one, else General.
+  const [creationProject, setCreationProject] = useState(
+      projectId || projects.find((p: Resource) => p.data.general)?.id || "",
+    ),
     [taskFields, setTaskFields] = useState<Record<string, CustomFieldValue>>(
       {},
     );
@@ -120,7 +123,9 @@ export function CreateDialog({
                 setTaskFields({});
               }}
             >
-              <option value="">Sin proyecto</option>
+              {!projects.some((p: Resource) => p.data.general) && (
+                <option value="">General</option>
+              )}
               {projects.map((p: Resource) => (
                 <option key={p.id} value={p.id}>
                   {p.title}
@@ -529,7 +534,9 @@ export function ResourceDialog({
                       setData({ projectId: e.target.value || null })
                     }
                   >
-                    <option value="">Sin proyecto</option>
+                    {!projects.some((p: Resource) => p.data.general) && (
+                      <option value="">General</option>
+                    )}
                     {projects.map((p: Resource) => (
                       <option value={p.id} key={p.id}>
                         {p.title}

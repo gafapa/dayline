@@ -110,11 +110,13 @@ try {
   await page.screenshot({ path: 'docs/evidence/dnd-sprint-1440.png' });
 
   phase = 'structure: drop a document on a folder';
-  const folder = await mutate('folder', `Carpeta ${suffix}`, {});
-  const doc = await mutate('document', `Documento ${suffix}`, {});
+  // Team documents always live in a project: put both inside Alfa and open its structure.
+  const folder = await mutate('folder', `Carpeta ${suffix}`, { parentId: alpha.id, projectId: alpha.id });
+  const doc = await mutate('document', `Documento ${suffix}`, { parentId: alpha.id, projectId: alpha.id });
   await openSection(page, 'Proyectos');
   await page.getByRole('button', { name: 'Estructura', exact: true }).click();
   const item = (r) => page.locator('.structure-item').filter({ hasText: r.title });
+  await item(alpha).getByRole('button', { name: 'Contenido', exact: true }).click();
   await item(doc).waitFor();
   await drag(item(doc).getByRole('button', { name: `Arrastrar ${doc.title}`, exact: true }), item(folder));
   const dialog = page.getByRole('dialog', { name: `Mover ${doc.title}` });
