@@ -431,9 +431,6 @@ export function ResourceDialog({
               <Suspense fallback={<p>Abriendo editor…</p>}>
                 <CollaborativeEditor
                   documentId={resource.id}
-                  documentSchemaVersion={
-                    resource.data.documentSchemaVersion ?? 1
-                  }
                   hasServerContent={
                     !!resource.data.content?.content?.some(
                       (node: any) =>

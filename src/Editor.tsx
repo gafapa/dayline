@@ -17,19 +17,12 @@ import {
   Link2,
 } from "lucide-react";
 import { useEffect, useRef } from "react";
-import {
-  DOCUMENT_SCHEMA_MESSAGE,
-  compatibleDocumentSchema,
-} from "../shared/document-protocol";
 
 export default function Editor(props: {
   content: any;
   onChange: (content: any) => void;
   editable?: boolean;
-  documentSchemaVersion?: number;
 }) {
-  if (!compatibleDocumentSchema(props.documentSchemaVersion ?? 1))
-    return <p role="alert">{DOCUMENT_SCHEMA_MESSAGE}</p>;
   return <CompatibleEditor {...props} />;
 }
 

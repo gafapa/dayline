@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import type { Resource, User, Workspace } from "../shared/model";
-import { DOCUMENT_SCHEMA_VERSION } from "../shared/document-protocol";
 import { useSprintDraft } from "./useSprintDraft";
 import { useLocalGuard } from "./useLocalGuard";
 import { Field } from "./components/Primitives";
@@ -122,7 +121,6 @@ export default function PrivateNotes({
           personalNote: true,
           ownerId: user.id,
           description: value.summary,
-          documentSchemaVersion: DOCUMENT_SCHEMA_VERSION,
           content: { type: "doc", content: [{ type: "paragraph" }] },
         },
         version: 0,

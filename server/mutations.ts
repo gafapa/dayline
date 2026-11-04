@@ -10,11 +10,6 @@ import {
   dashboardHistoryScopes,
 } from "./analytics.js";
 import { validateDocumentContent } from "./document-validation.js";
-import {
-  DOCUMENT_SCHEMA_VERSION,
-  DOCUMENT_SCHEMA_MESSAGE,
-  compatibleDocumentSchema,
-} from "../shared/document-protocol.js";
 import type { Connection } from "./database.js";
 import type { Resource, Role, User, Mutation } from "../shared/model.js";
 import { canRead } from "./permissions.js";
@@ -58,18 +53,12 @@ export async function applyMutation(
   const all = options.graph || (await resources(tx, workspaceId));
   if (input.data.documentSeedVersion !== undefined && input.kind !== "document")
     throw new HttpError(400, "El estado inicial pertenece a un documento.");
-  if (input.kind === "document") {
-    if (!compatibleDocumentSchema(input.data.documentSchemaVersion ?? 1))
-      throw new HttpError(409, DOCUMENT_SCHEMA_MESSAGE, {
-        code: "document_schema_mismatch",
-      });
-    if (input.data.content !== undefined && input.data.content !== null)
-      validateDocumentContent(input.data.content);
-    input.data = {
-      ...input.data,
-      documentSchemaVersion: DOCUMENT_SCHEMA_VERSION,
-    };
-  }
+  if (
+    input.kind === "document" &&
+    input.data.content !== undefined &&
+    input.data.content !== null
+  )
+    validateDocumentContent(input.data.content);
   const prior = options.skipOperation
     ? null
     : (

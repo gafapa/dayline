@@ -3,11 +3,6 @@ import { openLocalDatabase, deleteLocalDatabase } from "./local-database";
 import { assertLocalSession, sessionEpoch } from "./local-lifecycle";
 import type { Mutation, Resource, Workspace } from "../shared/model";
 import { api, ApiError, send } from "./api";
-import {
-  DOCUMENT_SCHEMA_VERSION,
-  DOCUMENT_SCHEMA_MESSAGE,
-  compatibleDocumentSchema,
-} from "../shared/document-protocol";
 interface Pending {
   key: string;
   workspaceId: string;
@@ -158,14 +153,7 @@ export async function queueMutation(
     id: resource.id,
     kind: resource.kind,
     title: resource.title,
-    data:
-      resource.kind === "document"
-        ? {
-            ...resource.data,
-            documentSchemaVersion:
-              resource.data.documentSchemaVersion ?? DOCUMENT_SCHEMA_VERSION,
-          }
-        : resource.data,
+    data: resource.data,
     expectedVersion,
     deleted: !!resource.deleted_at,
   };
@@ -202,23 +190,6 @@ export function flushOutbox(
       const item = pending.find((p) => !p.error && !blocked.has(p.resource.id));
       if (!item) break;
       try {
-        if (
-          item.resource.kind === "document" &&
-          !compatibleDocumentSchema(
-            item.mutation.data.documentSchemaVersion ?? 1,
-          )
-        )
-          throw new ApiError(409, DOCUMENT_SCHEMA_MESSAGE, {
-            code: "document_schema_mismatch",
-          });
-        if (
-          item.resource.kind === "document" &&
-          item.mutation.data.documentSeedVersion !== undefined &&
-          item.mutation.data.documentSeedVersion !== 1
-        )
-          throw new ApiError(409, DOCUMENT_SCHEMA_MESSAGE, {
-            code: "document_schema_mismatch",
-          });
         const result = await api<{ resource: Resource }>(
           `/workspaces/${workspaceId}/mutate`,
           send(item.mutation),

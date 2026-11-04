@@ -193,7 +193,7 @@ scripts/    Browser checks and build helpers
 docs/       Behaviour notes for each feature, plus self-hosting
 ```
 
-Each feature has a short behaviour note in `docs/`, for example [workflow states](docs/workflow.md), [sprints](docs/sprints.md), [offline documents](docs/document-protocol.md), [platform administration](docs/platform.md) and [design direction](docs/design.md).
+Each feature has a short behaviour note in `docs/`, for example [workflow states](docs/workflow.md), [sprints](docs/sprints.md), [document format](docs/document-protocol.md), [platform administration](docs/platform.md) and [design direction](docs/design.md).
 
 ## Security notes
 

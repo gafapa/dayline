@@ -2,7 +2,6 @@ import { authorizeLocalUser, withLocalSessionGate } from "./local-lifecycle";
 import { DragProvider, useDrag, useDrop } from "./dnd";
 import { useLocalGuard } from "./useLocalGuard";
 import { coordinateLocalSession, signOutEverywhereLocal, LocalWorkRetained } from "./session-coordination";
-import { DOCUMENT_SCHEMA_EVENT, DOCUMENT_SCHEMA_MESSAGE } from "../shared/document-protocol";
 import { isStructure, structureParent } from "../shared/hierarchy";
 import { applyFieldDefaults, fieldDefaults, fieldValueError } from "../shared/custom-fields";
 import { resolveNavigation } from "./resolve-navigation";
@@ -138,7 +137,6 @@ export default function App() {
     [command, setCommand] = useState(false);
   const [capturing, setCapturing] = useState(false);
   const [pendingState, setPending] = useState<any[]>([]),
-    [schemaIncompatible, setSchemaIncompatible] = useState(false),
     [syncing, setSyncing] = useState(false),
     [online, setOnline] = useState(navigator.onLine),
     [logoutRetention, setLogoutRetention] = useState(false),
@@ -147,7 +145,7 @@ export default function App() {
     [loading, setLoading] = useState(true);
   const pending = loadedScope.current === scopeKey ? pendingState : [];
   const workspace = workspaces.find((w) => w.id === workspaceId),
-    canEdit = !schemaIncompatible && workspace?.role !== "viewer";
+    canEdit = workspace?.role !== "viewer";
   useEffect(() => {
     setCapturing(false);
   }, [user?.id, workspaceId]);
@@ -174,14 +172,6 @@ export default function App() {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [user?.id, workspace?.id, canEdit]);
-  useEffect(() => {
-    const mismatch = () => {
-      setSchemaIncompatible(true);
-      setError(DOCUMENT_SCHEMA_MESSAGE);
-    };
-    window.addEventListener(DOCUMENT_SCHEMA_EVENT, mismatch);
-    return () => window.removeEventListener(DOCUMENT_SCHEMA_EVENT, mismatch);
-  }, []);
   const active = resources.filter((r) => !r.deleted_at && !r.data.archived),
     projects = active.filter((r) => r.kind === "project"),
     tasks = active.filter((r) => r.kind === "task"),
@@ -989,21 +979,6 @@ export default function App() {
           ? "sprint"
           : "task";
 
-  if (!user && schemaIncompatible)
-    return (
-      <main className="auth-shell">
-        <div role="alert">
-          <p>{DOCUMENT_SCHEMA_MESSAGE}</p>
-          <button
-            type="button"
-            className="schema-refresh"
-            onClick={() => location.reload()}
-          >
-            Actualizar aplicación
-          </button>
-        </div>
-      </main>
-    );
   if (!user)
     return (
       <Auth
@@ -1337,12 +1312,10 @@ export default function App() {
               </button>
             </div>
           )}
-          {(error || schemaIncompatible) && (
+          {error && (
             <div className="notice error" role="alert">
-              <span>
-                {schemaIncompatible ? DOCUMENT_SCHEMA_MESSAGE : error}
-              </span>
-              {logoutRetention && !schemaIncompatible && (
+              <span>{error}</span>
+              {logoutRetention && (
                 <div>
                   <p>
                     Las copias seguirán en este dispositivo. Necesitarás iniciar
@@ -1353,19 +1326,9 @@ export default function App() {
                   </button>
                 </div>
               )}
-              {schemaIncompatible ? (
-                <button
-                  type="button"
-                  className="schema-refresh"
-                  onClick={() => location.reload()}
-                >
-                  Actualizar aplicación
-                </button>
-              ) : (
-                <button aria-label="Cerrar aviso" onClick={() => setError("")}>
-                  <X size={16} />
-                </button>
-              )}
+              <button aria-label="Cerrar aviso" onClick={() => setError("")}>
+                <X size={16} />
+              </button>
             </div>
           )}
           {pending

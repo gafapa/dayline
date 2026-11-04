@@ -8,12 +8,7 @@ import { registerCollectionRoutes } from "./collections.js";
 import { registerDeliveryRoutes } from "./delivery.js";
 import { registerHierarchyRoutes } from "./hierarchy.js";
 import { registerCustomFieldRoutes } from "./custom-fields.js";
-import {
-  DOCUMENT_SCHEMA_VERSION,
-  DOCUMENT_SCHEMA_HEADER,
-  DOCUMENT_SCHEMA_MESSAGE,
-  compatibleDocumentSchema,
-} from "../shared/document-protocol.js";
+import { DOCUMENT_SCHEMA_VERSION } from "../shared/document-protocol.js";
 import Fastify, { type FastifyRequest, type FastifyReply } from "fastify";
 import cookie from "@fastify/cookie";
 import helmet from "@fastify/helmet";
@@ -183,8 +178,6 @@ export async function createApp(
     });
   });
   app.addHook("onRequest", async (req, reply) => {
-    if (req.url.startsWith("/api/"))
-      reply.header(DOCUMENT_SCHEMA_HEADER, String(DOCUMENT_SCHEMA_VERSION));
     if (req.url.startsWith("/api/")) reply.header("Cache-Control", "no-store");
     if (!["GET", "HEAD", "OPTIONS"].includes(req.method)) {
       if (req.headers.origin && req.headers.origin !== origin)
@@ -192,28 +185,6 @@ export async function createApp(
       if (req.headers["x-kelvin-client"] !== "web")
         throw new HttpError(403, "Falta la protección de la solicitud.");
     }
-  });
-
-  app.addHook("preHandler", async (req) => {
-    const path = req.url.split("?")[0];
-    const documentMutation =
-      req.method === "POST" &&
-      path.endsWith("/mutate") &&
-      ["document", "template"].includes((req.body as any)?.kind);
-    const contentRoute =
-      path === "/api/collaboration/ticket" ||
-      /\/documents\/[^/]+\/(state|revisions)$/.test(path) ||
-      (req.method === "POST" && /\/templates(?:\/|$)/.test(path));
-    if (
-      (documentMutation || contentRoute) &&
-      !compatibleDocumentSchema(
-        req.headers[DOCUMENT_SCHEMA_HEADER.toLowerCase()],
-      )
-    )
-      throw new HttpError(409, DOCUMENT_SCHEMA_MESSAGE, {
-        code: "document_schema_mismatch",
-        documentSchemaVersion: DOCUMENT_SCHEMA_VERSION,
-      });
   });
 
   const platformAdmins = new WeakMap<FastifyRequest, boolean>();

@@ -3,7 +3,6 @@ import { IndexeddbPersistence, storeState } from "y-indexeddb";
 import { api } from "./api";
 import { flushOutbox } from "./storage";
 import type { Resource } from "../shared/model";
-import { prepareDocumentCache } from "./document-cache";
 export async function downloadDocuments(
   userId: string,
   workspaceId: string,
@@ -13,7 +12,6 @@ export async function downloadDocuments(
   await flushOutbox(userId, workspaceId, () => {});
   let count = 0;
   for (const resource of documents) {
-    await prepareDocumentCache(`kelvin-${userId}-document-${resource.id}`);
     const { state } = await api(
       `/workspaces/${workspaceId}/documents/${resource.id}/state`,
     );

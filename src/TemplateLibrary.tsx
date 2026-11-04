@@ -774,9 +774,6 @@ function TemplateBuilder({
                       <Editor
                         key={node.key}
                         content={node.data.content}
-                        documentSchemaVersion={
-                          node.data.documentSchemaVersion as number | undefined
-                        }
                         onChange={(content) => changeData({ content })}
                       />
                     )}

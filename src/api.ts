@@ -1,11 +1,4 @@
 import { assertLocalSession, trackRequest } from "./local-lifecycle";
-import {
-  DOCUMENT_SCHEMA_VERSION,
-  DOCUMENT_SCHEMA_HEADER,
-  DOCUMENT_SCHEMA_EVENT,
-  DOCUMENT_SCHEMA_MESSAGE,
-  compatibleDocumentSchema,
-} from "../shared/document-protocol";
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -39,20 +32,10 @@ async function request<T>(
     headers: {
       "Content-Type": "application/json",
       "X-Kelvin-Client": "web",
-      [DOCUMENT_SCHEMA_HEADER]: String(DOCUMENT_SCHEMA_VERSION),
       ...init.headers,
     },
   });
-  const schema = response.headers.get(DOCUMENT_SCHEMA_HEADER);
-  if (schema !== null && !compatibleDocumentSchema(schema)) {
-    window.dispatchEvent(new Event(DOCUMENT_SCHEMA_EVENT));
-    throw new ApiError(409, DOCUMENT_SCHEMA_MESSAGE, {
-      code: "document_schema_mismatch",
-    });
-  }
   const body = await response.json().catch(() => ({}));
-  if (!response.ok && body.detail?.code === "document_schema_mismatch")
-    window.dispatchEvent(new Event(DOCUMENT_SCHEMA_EVENT));
   const retryAfter = Number(response.headers.get("Retry-After"));
   if (
     response.status === 429 &&

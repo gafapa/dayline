@@ -1,9 +1,5 @@
 import { fieldFilterError, type FieldFilter } from "../shared/custom-fields.js";
 import { validateDocumentContent } from "./document-validation.js";
-import {
-  DOCUMENT_SCHEMA_MESSAGE,
-  compatibleDocumentSchema,
-} from "../shared/document-protocol.js";
 import { isDeepStrictEqual } from "node:util";
 import { getSchema } from "@tiptap/core";
 import { documentExtensions } from "../shared/editor-schema.js";
@@ -64,13 +60,6 @@ export function validateBlueprint(value: unknown) {
       "La raíz de la plantilla no puede depender de otro elemento.",
     );
   for (const node of blueprint.nodes) {
-    if (
-      node.kind === "document" &&
-      !compatibleDocumentSchema(node.data.documentSchemaVersion ?? 1)
-    )
-      throw new HttpError(409, DOCUMENT_SCHEMA_MESSAGE, {
-        code: "document_schema_mismatch",
-      });
     if (
       Object.keys(node.data).some((key) => !templateFields.has(key)) ||
       (node.data.personalNote !== undefined && node.kind !== "document") ||

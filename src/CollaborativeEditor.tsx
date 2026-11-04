@@ -14,31 +14,10 @@ import { HocuspocusProvider } from "@hocuspocus/provider";
 import { IndexeddbPersistence, storeState } from "y-indexeddb";
 import { initialDocument } from "../shared/document-seed";
 import * as Y from "yjs";
-import {
-  Bold,
-  Italic,
-  Heading2,
-  List,
-  ListOrdered,
-  Code2,
-  Quote,
-  Check,
-  WifiOff,
-  Table2,
-  ListChecks,
-  Link2,
-  Sigma,
-  GitBranch,
-  Plus, GripVertical } from "lucide-react";
+import { Bold, Italic, Heading2, List, ListOrdered, Code2, Quote, Check, WifiOff, Table2, ListChecks, Link2, Sigma, GitBranch, Plus, GripVertical } from "lucide-react";
 import { api, send } from "./api";
-import { prepareDocumentCache } from "./document-cache";
 import { documentDatabaseChanged } from "./local-database";
 import { useLocalGuard } from "./useLocalGuard";
-import {
-  DOCUMENT_SCHEMA_MESSAGE,
-  DOCUMENT_SCHEMA_EVENT,
-  compatibleDocumentSchema,
-} from "../shared/document-protocol";
 import type { User } from "../shared/model";
 import { flushOutbox, pendingOperations } from "./storage";
 import { uploadAttachment } from "./Attachments";
@@ -57,7 +36,6 @@ export default function CollaborativeEditor({
   onContent,
   restore,
   hasServerContent,
-  documentSchemaVersion = 1,
 }: {
   documentId: string;
   workspaceId: string;
@@ -66,7 +44,6 @@ export default function CollaborativeEditor({
   onContent?: (content: DocumentNode) => void;
   restore?: { revision: string; content: DocumentNode };
   hasServerContent?: boolean;
-  documentSchemaVersion?: number;
 }) {
   const [bundle, setBundle] = useState<Bundle | null>(null),
     [compatibilityError, setCompatibilityError] = useState(""),
@@ -94,13 +71,6 @@ export default function CollaborativeEditor({
       accessBlocked = false,
       durableDigest = "";
     let confirmationTimer: ReturnType<typeof setTimeout>;
-    const incompatible = () => {
-      accessBlocked = true;
-      clearTimeout(confirmationTimer);
-      setCompatibilityError(DOCUMENT_SCHEMA_MESSAGE);
-      provider?.disconnect();
-    };
-    window.addEventListener(DOCUMENT_SCHEMA_EVENT, incompatible);
     doc.on("update", () => {
       revision++;
     });
@@ -135,17 +105,6 @@ export default function CollaborativeEditor({
       }
     };
     void (async () => {
-      if (!compatibleDocumentSchema(documentSchemaVersion))
-        throw new Error(DOCUMENT_SCHEMA_MESSAGE);
-      if (navigator.onLine) {
-        try {
-          await api("/health");
-        } catch (error: any) {
-          if (error?.detail?.code === "document_schema_mismatch") throw error;
-        }
-      }
-      await prepareDocumentCache(`kelvin-${user.id}-document-${documentId}`);
-      if (disposed) return;
       const localPersistence = new IndexeddbPersistence(
         `kelvin-${user.id}-document-${documentId}`,
         doc,
@@ -212,19 +171,7 @@ export default function CollaborativeEditor({
         document: doc,
         token: async () => {
           await flushOutbox(user.id, workspaceId, () => {});
-          try {
-            return (await api("/collaboration/ticket", send({}))).ticket;
-          } catch (error: any) {
-            if (
-              !disposed &&
-              error?.detail?.code === "document_schema_mismatch"
-            ) {
-              accessBlocked = true;
-              setCompatibilityError(DOCUMENT_SCHEMA_MESSAGE);
-              provider?.disconnect();
-            }
-            throw error;
-          }
+          return (await api("/collaboration/ticket", send({}))).ticket;
         },
         onStatus: ({ status }) => {
           if (disposed || accessBlocked) return;
@@ -298,13 +245,12 @@ export default function CollaborativeEditor({
     });
     return () => {
       disposed = true;
-      window.removeEventListener(DOCUMENT_SCHEMA_EVENT, incompatible);
       clearTimeout(confirmationTimer);
       provider?.destroy();
       void persistence?.destroy();
       doc.destroy();
     };
-  }, [documentId, workspaceId, user.id, documentSchemaVersion]);
+  }, [documentId, workspaceId, user.id]);
   if (compatibilityError)
     return (
       <div role="alert">

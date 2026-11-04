@@ -1,9 +1,5 @@
 import * as Y from "yjs";
 import { validateDocumentContent } from "./document-validation.js";
-import {
-  DOCUMENT_SCHEMA_MESSAGE,
-  compatibleDocumentSchema,
-} from "../shared/document-protocol.js";
 import { HttpError } from "./errors.js";
 import { getSchema } from "@tiptap/core";
 import { prosemirrorJSONToYDoc } from "@tiptap/y-tiptap";
@@ -16,10 +12,6 @@ export async function documentState(db: Database, id: string): Promise<Buffer> {
       await tx.query("SELECT data FROM resources WHERE id=$1 FOR UPDATE", [id])
     ).rows[0];
     if (!row) throw new Error("Document unavailable");
-    if (!compatibleDocumentSchema(row.data.documentSchemaVersion ?? 1))
-      throw new HttpError(409, DOCUMENT_SCHEMA_MESSAGE, {
-        code: "document_schema_mismatch",
-      });
     const previous = (
       await tx.query("SELECT state FROM document_states WHERE resource_id=$1", [
         id,
