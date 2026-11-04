@@ -2,7 +2,7 @@ import { acceptsChild } from "../shared/hierarchy";
 import { lazy, Suspense, useState } from "react";
 import { useServerCommand } from "./useServerCommand";
 import { Field, Modal } from "./components/Primitives";
-import { useSprintDraft } from "./useSprintDraft";
+import { useDraft } from "./useDraft";
 import {
   templateBlueprintSchema,
   rewriteDocument,
@@ -328,7 +328,7 @@ function TemplateBuilder({
     [busy, setBusy] = useState(false),
     [dirty, setDirty] = useState(false),
     [baseVersion, setBaseVersion] = useState(resource?.version || 0);
-  const draft = useSprintDraft(
+  const draft = useDraft(
     user.id,
     `${workspace.id}:template:${resource?.id || "new"}`,
     { blueprint, title, description, shared, baseVersion },

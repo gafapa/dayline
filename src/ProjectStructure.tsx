@@ -23,7 +23,6 @@ import {
 import { Field, Modal } from "./components/Primitives";
 import { api, send } from "./api";
 import { useServerCommand } from "./useServerCommand";
-import { useSprintDraft } from "./useSprintDraft";
 type StructureKind = "folder" | "project" | "document";
 type Props = {
   resources: Resource[];
@@ -472,22 +471,6 @@ function CreateStructure({
     [dirty, setDirty] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
-  const draft = useSprintDraft(
-    user.id,
-    `${workspace.id}:hierarchy:create:${kind}`,
-    value,
-    dirty,
-    (data) => {
-      if (
-        typeof data?.title === "string" &&
-        typeof data?.description === "string" &&
-        (data.parentId === null || typeof data.parentId === "string")
-      ) {
-        setValue(data);
-        setDirty(true);
-      }
-    },
-  );
   const update = (patch: Partial<typeof value>) => {
     setValue((v) => ({ ...v, ...patch }));
     setDirty(true);
@@ -516,7 +499,6 @@ function CreateStructure({
                 ? { content: { type: "doc", content: [{ type: "paragraph" }] } }
                 : {}),
             });
-            await draft.clear();
             close();
           } catch (error) {
             setError((error as Error).message);
@@ -526,10 +508,6 @@ function CreateStructure({
         }}
       >
         {error && <p role="alert">{error}</p>}
-        {draft.issue && <p role="alert">{draft.issue}</p>}
-        {draft.saved && (
-          <p role="status">Borrador guardado en este dispositivo.</p>
-        )}
         <Field label="Título">
           <input
             autoFocus
@@ -571,7 +549,7 @@ function CreateStructure({
           <button type="button" onClick={close}>
             Cerrar
           </button>
-          <button className="primary" disabled={busy || !draft.ready}>
+          <button className="primary" disabled={busy}>
             {busy
               ? "Guardando…"
               : `Crear ${kindLabels[kind].toLocaleLowerCase()}`}

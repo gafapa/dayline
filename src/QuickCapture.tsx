@@ -9,7 +9,7 @@ import { fieldDefaults } from "../shared/custom-fields";
 import { isStructure } from "../shared/hierarchy";
 import { Field, Modal } from "./components/Primitives";
 import { ConfiguredTaskFields } from "./CustomFieldInputs";
-import { useSprintDraft } from "./useSprintDraft";
+import { useDraft } from "./useDraft";
 import { useLocalGuard } from "./useLocalGuard";
 
 export default function QuickCapture({
@@ -66,7 +66,7 @@ export default function QuickCapture({
     if (!busy && message.startsWith("«")) titleRef.current?.focus();
   }, [busy, message]);
   useLocalGuard(busy ? "Espera a que termine el guardado de la captura." : "");
-  const draft = useSprintDraft(
+  const draft = useDraft(
     user.id,
     `${workspace.id}:quick-capture:new`,
     value,

@@ -15,8 +15,8 @@ import {
   type HistoryReport,
 } from "../shared/analytics";
 import { api, ApiError, send } from "./api";
-import { readUserDraft, writeUserDraft, removeUserDraft } from "./storage";
-import { useSprintDraft } from "./useSprintDraft";
+import { readUserCache, writeUserCache, removeUserDraft } from "./storage";
+import { useDraft } from "./useDraft";
 import { Field } from "./components/Primitives";
 type Member = { id: string; name: string };
 const amount = (n: number | null) =>
@@ -87,7 +87,7 @@ export default function Reports({
   const manage =
     canEdit &&
     (!source || source.created_by === user.id || workspace.role === "admin");
-  const draft = useSprintDraft(
+  const draft = useDraft(
     user.id,
     `${workspace.id}:dashboard:${focusId || "default"}`,
     { config, title, version, shared },
@@ -188,7 +188,7 @@ export default function Reports({
         try {
           let value: HistoryReport, cachedAt: string;
           if (!navigator.onLine) {
-            const cached = await readUserDraft(user.id, cacheKey);
+            const cached = await readUserCache(user.id, cacheKey);
             if (!cached || cached.query !== query || cached.scope !== scope)
               throw new Error(
                 "Conecta para calcular el historial con estos filtros y datos.",
@@ -208,7 +208,7 @@ export default function Reports({
             );
             cachedAt = new Date().toISOString();
             if (generation !== sequence.current) return;
-            await writeUserDraft(user.id, cacheKey, {
+            await writeUserCache(user.id, cacheKey, {
               query,
               scope,
               history: value,

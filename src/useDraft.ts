@@ -1,7 +1,8 @@
 import { useLocalGuard } from "./useLocalGuard";
 import { useEffect, useRef, useState } from "react";
 import { readUserDraft, writeUserDraft, removeUserDraft } from "./storage";
-export function useSprintDraft(
+/** Keeps an unsaved long form in local storage until it is saved or discarded. */
+export function useDraft(
   userId: string,
   key: string,
   snapshot: unknown,

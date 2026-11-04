@@ -10,8 +10,8 @@ import { useCallback, useEffect, useRef, useState, useId, type ReactNode } from 
 import { ArrowUp, ArrowDown, GripVertical, Plus, Trash2 } from "lucide-react";
 import { api, send } from "./api";
 import { Field } from "./components/Primitives";
-import { flushOutbox, readUserDraft, writeUserDraft } from "./storage";
-import { useSprintDraft } from "./useSprintDraft";
+import { flushOutbox, readUserCache, writeUserCache } from "./storage";
+import { useDraft } from "./useDraft";
 import {
   capacityHours,
   emptyCeremony,
@@ -122,7 +122,7 @@ function SprintDetail(
         clientRevision: (previous?.clientRevision || 0) + 1,
       }));
       setError("");
-      void writeUserDraft(
+      void writeUserCache(
         user.id,
         `${workspaceId}:${sprintId}:planning-cache`,
         { ...result, candidates: [], cachedAt: new Date().toISOString() },
@@ -135,7 +135,7 @@ function SprintDetail(
       if (generation !== planRead.current) return;
       if (!navigator.onLine) {
         try {
-          const cached = await readUserDraft(
+          const cached = await readUserCache(
             user.id,
             `${workspaceId}:${sprintId}:planning-cache`,
           );
@@ -455,7 +455,7 @@ function SprintPlan({
       ]),
     ),
     chosen = selected.map((id) => tasks.get(id)).filter(Boolean) as Resource[];
-  const draftStore = useSprintDraft(
+  const draftStore = useDraft(
     user.id,
     `${workspaceId}:${sprint.id}:plan`,
     {
@@ -1264,7 +1264,7 @@ function SprintReview({
   const load = useCallback(async () => {
     try {
       const data = await api(`${base}/ceremonies`);
-      void writeUserDraft(
+      void writeUserCache(
         user.id,
         `${workspaceId}:${sprint.id}:review-cache`,
         data,
@@ -1280,7 +1280,7 @@ function SprintReview({
     } catch (error) {
       if (!navigator.onLine) {
         try {
-          const cached = await readUserDraft(
+          const cached = await readUserCache(
             user.id,
             `${workspaceId}:${sprint.id}:review-cache`,
           );
@@ -1300,7 +1300,7 @@ function SprintReview({
   useEffect(() => {
     void load();
   }, [load]);
-  const draftStore = useSprintDraft(
+  const draftStore = useDraft(
     user.id,
     `${workspaceId}:${sprint.id}:review`,
     { data: draft, version, actionTitle, actionFields },

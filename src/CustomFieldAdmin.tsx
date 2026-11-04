@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Field, Modal } from "./components/Primitives";
 import { api, send } from "./api";
-import { useSprintDraft } from "./useSprintDraft";
 import { useServerCommand } from "./useServerCommand";
 import {
   fieldDefinitionSchema,
@@ -39,38 +38,12 @@ export default function CustomFieldAdmin({
     [preview, setPreview] = useState<any>(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
-  const draft = useSprintDraft(
-    user.id,
-    `${workspace.id}:fields:${project.id}`,
-    { definitions, version, fillMissing, selected },
-    dirty,
-    (value) => {
-      if (
-        !Array.isArray(value?.definitions) ||
-        !Number.isInteger(value.version) ||
-        value.definitions.some(
-          (f: any) =>
-            typeof f?.id !== "string" ||
-            typeof f.name !== "string" ||
-            !fieldTypes.includes(f.type) ||
-            !Array.isArray(f.options),
-        )
-      )
-        throw new Error("Invalid field draft");
-      setDefinitions(value.definitions);
-      setVersion(value.version);
-      setFillMissing(!!value.fillMissing);
-      setSelected(value.selected || value.definitions[0]?.id || "");
-      setDirty(true);
-    },
-  );
   const command = useServerCommand(
     user.id,
     workspace.id,
     `fields:${project.id}`,
     async () => {
       await refresh();
-      await draft.clear();
       setDirty(false);
       close();
     },
@@ -86,7 +59,6 @@ export default function CustomFieldAdmin({
     setPreview(null);
   };
   const restore = async () => {
-    await draft.clear();
     setDefinitions(initial);
     setVersion(project.version);
     setSelected(initial[0]?.id || "");
@@ -119,7 +91,6 @@ export default function CustomFieldAdmin({
                 },
               );
               await refresh();
-              await draft.clear();
               setDirty(false);
               close();
             } else
@@ -143,10 +114,6 @@ export default function CustomFieldAdmin({
       >
         {command.recovery}
         {error && <p role="alert">{error}</p>}
-        {draft.issue && <p role="alert">{draft.issue}</p>}
-        {draft.saved && (
-          <p role="status">Borrador guardado en este dispositivo.</p>
-        )}
         <p>
           Define los datos que necesita cada tarea. Renombrar o archivar
           conserva los valores guardados.
@@ -441,8 +408,7 @@ export default function CustomFieldAdmin({
         )}
         {!navigator.onLine && (
           <p>
-            Conéctate para revisar y aplicar la configuración. El borrador se
-            conserva.
+            Conéctate para revisar y aplicar la configuración.
           </p>
         )}
         <div className="form-actions">
@@ -455,7 +421,7 @@ export default function CustomFieldAdmin({
           <button
             className="primary"
             disabled={
-              busy || !draft.ready || !command.ready || !navigator.onLine
+              busy || !command.ready || !navigator.onLine
             }
           >
             {busy

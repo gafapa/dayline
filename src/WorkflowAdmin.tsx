@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { Field, Modal } from "./components/Primitives";
-import { useSprintDraft } from "./useSprintDraft";
 import type { Resource, User, Workspace } from "../shared/model";
 import { statusLabels, taskStatuses } from "../shared/task-status";
 import {
@@ -40,20 +39,6 @@ export default function WorkflowAdmin({
     [dirty, setDirty] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
-  const draft = useSprintDraft(
-    user.id,
-    `${workspace.id}:workflow:${project.id}`,
-    { states, version },
-    dirty,
-    (value) => {
-      const parsed = workflowStatesSchema.safeParse(value?.states);
-      if (!parsed.success || !Number.isInteger(value?.version))
-        throw new Error("Invalid workflow draft");
-      setStates(parsed.data);
-      setVersion(value.version);
-      setDirty(true);
-    },
-  );
   const change = (next: WorkflowState[]) => {
     setStates(next);
     setDirty(true);
@@ -82,7 +67,6 @@ export default function WorkflowAdmin({
         t.data.stateId === id,
     ).length;
   const discard = async () => {
-    await draft.clear();
     setStates(saved);
     setVersion(project.version);
     setDirty(false);
@@ -110,13 +94,12 @@ export default function WorkflowAdmin({
             checkWorkflowChange(parsed.data, saved);
             if (version !== project.version)
               throw new Error(
-                "El proyecto ha cambiado mientras editabas. Descarta el borrador y revisa el flujo actual.",
+                "El proyecto ha cambiado mientras editabas. Descarta los cambios y revisa el flujo actual.",
               );
             await save({
               ...project,
               data: { ...project.data, workflowStates: parsed.data },
             });
-            await draft.clear();
             setDirty(false);
             close();
           } catch (e) {
@@ -127,10 +110,6 @@ export default function WorkflowAdmin({
         }}
       >
         {error && <p role="alert">{error}</p>}
-        {draft.issue && <p role="alert">{draft.issue}</p>}
-        {draft.saved && (
-          <p role="status">Borrador guardado en este dispositivo.</p>
-        )}
         <p>
           Nombra las etapas reales de este proyecto. Cada estado pertenece a
           una categoría fija, que usan los informes, los sprints y las
@@ -248,7 +227,7 @@ export default function WorkflowAdmin({
           <button type="button" onClick={close}>
             Cerrar
           </button>
-          <button className="primary" disabled={busy || !dirty || !draft.ready}>
+          <button className="primary" disabled={busy || !dirty}>
             Guardar flujo
           </button>
         </div>

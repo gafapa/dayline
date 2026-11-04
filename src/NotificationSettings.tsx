@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { api, send } from "./api";
 import { Field } from "./components/Primitives";
-import { useSprintDraft } from "./useSprintDraft";
 import { useLocalGuard } from "./useLocalGuard";
 import {
   notificationCategories,
@@ -33,19 +32,6 @@ export default function NotificationSettings({
   useLocalGuard(
     busy ? "Espera a que termine el guardado de las preferencias." : "",
   );
-  const draft = useSprintDraft(
-    userId,
-    "notification-settings",
-    value,
-    dirty,
-    (snapshot) => {
-      const settings = notificationDraftSchema.parse(snapshot?.settings);
-      if (!Number.isSafeInteger(snapshot?.version) || snapshot.version < 0)
-        throw new Error("Invalid notification settings draft");
-      setValue({ settings, version: snapshot.version });
-      setDirty(true);
-    },
-  );
   const settings = value.settings;
   const patch = (next: Partial<Settings>) => {
     setValue((before) => ({
@@ -64,7 +50,7 @@ export default function NotificationSettings({
     try {
       if (!navigator.onLine)
         throw new Error(
-          "Sin conexión. Tu borrador se conserva; guarda las preferencias al volver a conectarte.",
+          "Sin conexión. Guarda las preferencias al volver a conectarte.",
         );
       const validated = notificationSettingsSchema.safeParse(settings);
       if (!reload && !validated.success)
@@ -86,11 +72,10 @@ export default function NotificationSettings({
         notificationSettings: result.settings,
         notificationSettingsVersion: result.version,
       });
-      await draft.clear();
       setDirty(false);
       setMessage(
         reload
-          ? "Preferencias del servidor cargadas. Se ha descartado el borrador local."
+          ? "Preferencias del servidor cargadas."
           : "Preferencias de notificaciones guardadas.",
       );
     } catch (issue) {
@@ -117,7 +102,7 @@ export default function NotificationSettings({
           void apply();
         }}
       >
-        <fieldset disabled={busy || !draft.ready}>
+        <fieldset disabled={busy}>
           <legend>Tu bandeja de entrada</legend>
           <label className="checklist-item">
             <input
@@ -227,18 +212,12 @@ export default function NotificationSettings({
             </fieldset>
           </fieldset>
         </fieldset>
-        {draft.issue && <p role="alert">{draft.issue}</p>}
         {error && <p role="alert">{error}</p>}
         <p role="status">
-          {message ||
-            (dirty
-              ? draft.saved
-                ? "Borrador de preferencias guardado en este dispositivo."
-                : "Guardando el borrador local…"
-              : "")}
+          {message || (dirty ? "Cambios sin guardar." : "")}
         </p>
         <div className="notification-actions">
-          <button className="primary" disabled={busy || !draft.ready || !dirty}>
+          <button className="primary" disabled={busy || !dirty}>
             Guardar preferencias de notificaciones
           </button>
           <button
@@ -246,7 +225,7 @@ export default function NotificationSettings({
             disabled={busy}
             onClick={() => void apply(true)}
           >
-            Descartar borrador y cargar del servidor
+            Descartar cambios y cargar del servidor
           </button>
         </div>
         <p className="muted">

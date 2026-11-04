@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Resource, User, Workspace } from "../shared/model";
 import { Field } from "./components/Primitives";
-import { useSprintDraft } from "./useSprintDraft";
+import { useDraft } from "./useDraft";
 import { reportCSV } from "../shared/analytics";
 import { validTimeZone } from "../shared/time";
 import {
@@ -100,7 +100,7 @@ export default function TimeTracking({
       canEdit &&
       (!source || source.created_by === user.id) &&
       !source?.deleted_at;
-  const draft = useSprintDraft(
+  const draft = useDraft(
     user.id,
     `${workspace.id}:time-entry:${focusId || "new"}`,
     form,

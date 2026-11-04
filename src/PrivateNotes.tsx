@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { Resource, User, Workspace } from "../shared/model";
-import { useSprintDraft } from "./useSprintDraft";
+import { useDraft } from "./useDraft";
 import { useLocalGuard } from "./useLocalGuard";
 import { Field } from "./components/Primitives";
 
@@ -36,7 +36,7 @@ export default function PrivateNotes({
   useLocalGuard(
     busy ? "Espera a que termine la operación de la nota personal." : "",
   );
-  const draft = useSprintDraft(
+  const draft = useDraft(
     user.id,
     `${workspace.id}:personal-note:new`,
     value,

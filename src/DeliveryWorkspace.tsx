@@ -4,7 +4,7 @@ import { Field, Modal } from "./components/Primitives";
 import { api } from "./api";
 import { flushOutbox } from "./storage";
 import { useServerCommand } from "./useServerCommand";
-import { useSprintDraft } from "./useSprintDraft";
+import { useDraft } from "./useDraft";
 import { Attachments } from "./Attachments";
 import { AutomationHistory } from "./Automations";
 import {
@@ -980,7 +980,7 @@ function DeliveryEditor(
     [dirty, setDirty] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
-  const draft = useSprintDraft(
+  const draft = useDraft(
     user.id,
     `${workspace.id}:delivery:${resource?.id || `new-${kind}`}`,
     { title, data, baseVersion },

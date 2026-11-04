@@ -5,8 +5,8 @@ import {
   localSnapshot,
   pendingOperations,
   flushOutbox,
-  readUserDraft,
-  writeUserDraft,
+  readUserCache,
+  writeUserCache,
   removeUserDraft,
 } from "./storage";
 import type { Resource, Workspace } from "../shared/model";
@@ -37,7 +37,7 @@ async function cachedResource(
   workspaces: Workspace[],
   resourceId: string,
 ) {
-  if (await readUserDraft(userId, `navigation-denied:${resourceId}`))
+  if (await readUserCache(userId, `navigation-denied:${resourceId}`))
     throw new Error(
       "El último control de acceso rechazó este enlace. Conéctate para verificarlo de nuevo.",
     );
@@ -169,7 +169,7 @@ export async function resolveNavigation(
       error instanceof ApiError &&
       [403, 404].includes(error.status)
     )
-      await writeUserDraft(userId, `navigation-denied:${route.id}`, {
+      await writeUserCache(userId, `navigation-denied:${route.id}`, {
         at: Date.now(),
       });
     if (

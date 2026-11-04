@@ -303,6 +303,15 @@ export async function writeUserDraft(
     await tx.store.put(true, "protected-draft:" + key);
   await tx.done;
 }
+/** Read-through copies of server data for offline viewing. Never block sign-out. */
+export async function readUserCache(userId: string, key: string) {
+  return (await database(userId)).get("metadata", "cache:" + key);
+}
+export async function writeUserCache(userId: string, key: string, value: unknown) {
+  const db = await database(userId);
+  assertLocalSession(userId);
+  await db.put("metadata", value, "cache:" + key);
+}
 export async function removeUserDraft(userId: string, key: string) {
   const db = await database(userId);
   assertLocalSession(userId);
@@ -321,13 +330,7 @@ export async function localLogoutIssue(userId: string) {
     keys.some((key) => {
       const name = String(key);
       return (
-        name.startsWith("protected-draft:") ||
-        (name.startsWith("draft:") &&
-          !name.startsWith("draft:navigation-denied:") &&
-          !/^draft:[a-f0-9-]+:analytics:/.test(name) &&
-          !/^draft:[a-f0-9-]+:reminder-status-cache$/.test(name) &&
-          !name.endsWith(":planning-cache") &&
-          !name.endsWith(":review-cache"))
+        name.startsWith("protected-draft:") || name.startsWith("draft:")
       );
     })
   )

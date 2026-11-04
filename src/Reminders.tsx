@@ -11,9 +11,9 @@ import { validTimeZone } from "../shared/time";
 import { api } from "./api";
 import { Field } from "./components/Primitives";
 import { ResourceLink } from "./ResourceLink";
-import { useSprintDraft } from "./useSprintDraft";
+import { useDraft } from "./useDraft";
 import { useLocalGuard } from "./useLocalGuard";
-import { readUserDraft, writeUserDraft } from "./storage";
+import { readUserCache, writeUserCache } from "./storage";
 
 const formSchema = z
   .object({
@@ -107,7 +107,7 @@ export default function Reminders({
   useLocalGuard(
     busy ? "Espera a que termine la operación del recordatorio." : "",
   );
-  const draft = useSprintDraft(
+  const draft = useDraft(
     user.id,
     `${workspace.id}:reminder:${focusId || "new"}`,
     form,
@@ -130,7 +130,7 @@ export default function Reminders({
     const key = `${workspace.id}:reminder-status-cache`;
     const load = async () => {
       try {
-        const cached = await readUserDraft(user.id, key);
+        const cached = await readUserCache(user.id, key);
         if (!disposed && Array.isArray(cached?.deliveries)) {
           setDelivery(cached.deliveries);
           setDeliveryAt(cached.at || "");
@@ -150,7 +150,7 @@ export default function Reminders({
         setDelivery(result.deliveries);
         setDeliveryAt(at);
         setDeliveryIssue("");
-        await writeUserDraft(user.id, key, { ...result, at });
+        await writeUserCache(user.id, key, { ...result, at });
       } catch {
         if (!disposed)
           setDeliveryIssue(
