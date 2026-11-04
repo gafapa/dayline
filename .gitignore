@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/
+.env
+.env.*
+!.env.example
+.local/
+test-results/
+playwright-report/
+*.tar.gz
+docs/evidence/
+.taste-skill/

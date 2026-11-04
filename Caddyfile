@@ -1,0 +1,6 @@
+# DAYLINE_ADDRESS is ":80" for plain local HTTP, or your domain (dayline.example.com) for automatic HTTPS.
+{$DAYLINE_ADDRESS}
+
+encode zstd gzip
+reverse_proxy /collaboration* app:4311
+reverse_proxy app:4310

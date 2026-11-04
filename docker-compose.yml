@@ -1,0 +1,61 @@
+# Dayline with PostgreSQL behind Caddy (automatic HTTPS).
+# 1. cp .env.example .env and fill it in (see docs/self-hosting.md).
+# 2. docker compose up -d
+# 3. Open APP_ORIGIN and follow the installation wizard.
+services:
+  app:
+    build: .
+    image: dayline:local
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      DATABASE_URL: postgresql://dayline:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@database:5432/dayline
+      TRUSTED_PROXY_IP: 172.28.0.10
+    depends_on:
+      database:
+        condition: service_healthy
+    networks: [internal]
+    read_only: true
+    tmpfs: ["/tmp:size=16m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+  database:
+    image: postgres:18-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: dayline
+      POSTGRES_DB: dayline
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes: ["database:/var/lib/postgresql"]
+    networks: [internal]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U dayline -d dayline]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  proxy:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      DAYLINE_ADDRESS: ${DAYLINE_ADDRESS:-:80}
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    depends_on: [app]
+    networks:
+      internal:
+        ipv4_address: 172.28.0.10
+
+networks:
+  internal:
+    ipam:
+      config: [{ subnet: 172.28.0.0/24 }]
+
+volumes:
+  database:
+  caddy-data:
