@@ -1322,7 +1322,9 @@ export default function App() {
               {syncing
                 ? "Sincronizando"
                 : !online
-                  ? "Sin conexión"
+                  ? pending.length
+                    ? `Sin conexión · ${pending.length} ${pending.length === 1 ? "cambio pendiente" : "cambios pendientes"}`
+                    : "Sin conexión"
                   : pending.length
                     ? `${pending.length} cambios pendientes`
                     : "Sincronizado"}
