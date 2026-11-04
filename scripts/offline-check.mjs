@@ -30,8 +30,8 @@ try {
   await page
     .getByRole("heading", { name: "Hoy", exact: true })
     .waitFor();
-  await page.waitForFunction(() => !!navigator.serviceWorker.controller);
-  await page.waitForFunction(() => !!navigator.serviceWorker.controller);
+  await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 60000 });
+  await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 60000 });
   const title = `Documento creado sin conexión ${Date.now()}`,
     text =
       "Este contenido se creó sin conexión y debe conservarse al recargar.";

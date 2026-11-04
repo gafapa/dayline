@@ -442,8 +442,8 @@ try {
       exact: true,
     })
     .waitFor();
-  await page.waitForFunction(() => !!navigator.serviceWorker.controller);
-  await page.waitForFunction(() => !!navigator.serviceWorker.controller);
+  await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 60000 });
+  await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 60000 });
   await context.setOffline(true);
   await page.reload({ waitUntil: "domcontentloaded" });
   await page

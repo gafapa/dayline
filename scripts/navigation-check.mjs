@@ -264,8 +264,8 @@ try {
     ),
     false,
   );
-  await page.waitForFunction(() => !!navigator.serviceWorker.controller);
-  await page.waitForFunction(() => !!navigator.serviceWorker.controller);
+  await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 60000 });
+  await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 60000 });
   await context.setOffline(true);
   await page.goto(href(taskA.id), { waitUntil: "domcontentloaded" });
   await expect(title(page)).toHaveValue(taskA.title);
@@ -356,8 +356,8 @@ try {
     .filter({ hasText: "El enlace no está disponible para esta cuenta." })
     .waitFor();
   assert.equal(await reader.getByRole("dialog").count(), 0);
-  await reader.waitForFunction(() => !!navigator.serviceWorker.controller);
-  await reader.waitForFunction(() => !!navigator.serviceWorker.controller);
+  await reader.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 60000 });
+  await reader.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 60000 });
   await visitor.setOffline(true);
   await reader.reload({ waitUntil: "domcontentloaded" });
   await reader

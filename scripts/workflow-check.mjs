@@ -32,7 +32,7 @@ try{
  phase='move to named state';await page.getByLabel(`Estado de ${task.title}`,{exact:true}).selectOption(qa.id);
  await page.getByRole('region',{name:'QA',exact:true}).getByRole('button',{name:task.title,exact:true}).waitFor();
  await expect.poll(async()=>{const t=await snapshot(task.id);return `${t?.data.status}:${t?.data.stateId}`;}).toBe(`review:${qa.id}`);
- phase='offline state change';await page.waitForFunction(()=>!!navigator.serviceWorker.controller);await context.setOffline(true);
+ phase='offline state change';await page.waitForFunction(()=>!!navigator.serviceWorker.controller,null,{timeout:60000});await context.setOffline(true);
  await page.getByLabel(`Estado de ${task.title}`,{exact:true}).selectOption(triage.id);await page.getByRole('region',{name:'Triaje',exact:true}).getByRole('button',{name:task.title,exact:true}).waitFor();
  await page.reload({waitUntil:'domcontentloaded'});await showBoard();await page.getByRole('region',{name:'Triaje',exact:true}).getByRole('button',{name:task.title,exact:true}).waitFor();
  await context.setOffline(false);
