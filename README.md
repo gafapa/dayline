@@ -152,7 +152,7 @@ Full checks:
 
 ```bash
 npm run typecheck   # TypeScript
-npm test            # 177 server and model tests (node:test)
+npm test            # 172 server and model tests (node:test)
 npm run build       # web app, service worker and server bundle
 ```
 
@@ -161,12 +161,12 @@ npm run build       # web app, service worker and server bundle
 - If the new version doesn't report healthy, the deploy switches back to the previous folder automatically.
 - The image is rebuilt only when `package-lock.json` changes.
 
-**Browser checks.** 23 Playwright scenarios run against the compiled app, using synthetic data only:
+**Browser checks.** 22 Playwright scenarios run against the compiled app, using synthetic data only:
 
 ```bash
-ENCRYPTION_KEY=$(openssl rand -hex 32) npm run preview   # in another terminal
-node scripts/browser-check.mjs                            # runs the wizard and creates the test account
-node scripts/verify-browser.mjs                           # every scenario
+npm run preview:test   # in another terminal: compiled app with raised local rate limits
+npm run e2e:quick      # core flows, about 2 minutes
+npm run e2e            # every scenario, about 6 minutes
 ```
 
 All of this runs on every push in [GitHub Actions](.github/workflows/ci.yml).
@@ -181,6 +181,8 @@ All of this runs on every push in [GitHub Actions](.github/workflows/ci.yml).
 | API | Fastify, zod validation, same-origin session cookies, rate limits |
 | Data | PostgreSQL transactions with optimistic concurrency; PGlite in development |
 | Background work | Automations, reminders and digests on a PostgreSQL queue in the same process |
+
+Design rules for contributors live in **[docs/architecture.md](docs/architecture.md)**.
 
 ### Project layout
 
