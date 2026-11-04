@@ -8,7 +8,10 @@
     "build": "tsc --noEmit && vite build && node scripts/build-service-worker.mjs && tsup server/index.ts --format esm --platform node --target node24 --out-dir build --external @electric-sql/pglite",
     "start": "node --env-file-if-exists=.env build/index.js",
     "test": "tsx --test tests/*.test.ts",
+    "test:watch": "tsx --test --watch tests/*.test.ts",
+    "test:one": "tsx --test",
     "typecheck": "tsc --noEmit",
+    "check": "tsc --noEmit && tsx --test tests/*.test.ts",
     "preview": "concurrently -k \"node build/index.js\" \"vite preview --host 127.0.0.1 --port 5173 --strictPort\""
   },
   "dependencies": {

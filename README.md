@@ -130,11 +130,29 @@ Then open your domain and complete the wizard. The full guide covers configurati
 
 ## Development
 
+The fast inner loop:
+
+```bash
+npm run dev          # Vite hot reload for the UI, plus the API restarting on save
+npm run test:watch   # re-runs the server tests on every change
+npm run test:one tests/workflow.test.ts   # just one file
+npm run check        # typecheck + tests before you push
+```
+
+UI edits show up instantly without losing state. Server edits restart the API in about a second. The embedded database survives restarts in `.local/`, and you can delete that folder to start fresh with the installation wizard.
+
+Full checks:
+
 ```bash
 npm run typecheck   # TypeScript
 npm test            # 177 server and model tests (node:test)
 npm run build       # web app, service worker and server bundle
 ```
+
+**Deploying small changes quickly.** The production image only holds Node.js and the dependencies. The compiled app (`build/`, `dist/`) is mounted from a release folder:
+- A deploy uploads a few MB, takes a quick database dump, switches the folder and recreates only the app container. That takes about 10 seconds.
+- If the new version doesn't report healthy, the deploy switches back to the previous folder automatically.
+- The image is rebuilt only when `package-lock.json` changes.
 
 **Browser checks.** 22 Playwright scenarios run against the compiled app, using synthetic data only:
 
