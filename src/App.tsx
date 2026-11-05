@@ -2235,6 +2235,51 @@ export default function App() {
           />
         </Suspense>
       )}
+      <nav aria-label="Navegación inferior" className="bottom-bar">
+        {(
+          [
+            ["overview", "Hoy", Sun],
+            ["inbox", "Bandeja", Inbox],
+            ["capture", "Capturar", Plus],
+            ["projects", "Proyectos", FolderKanban],
+            ["search", "Buscar", Search],
+          ] as const
+        ).map(([key, label, Icon]) => {
+          const current = key === page && !projectId;
+          const unread =
+            key === "inbox"
+              ? active.filter(
+                  (r) =>
+                    r.kind === "notification" &&
+                    r.data.assigneeId === user.id &&
+                    !r.data.read &&
+                    !(r.data.snoozedUntil && Date.parse(r.data.snoozedUntil) > Date.now()),
+                ).length
+              : 0;
+          if (key === "capture" && !canEdit) return null;
+          return (
+            <button
+              key={key}
+              className={`bottom-bar-item ${key === "capture" ? "capture" : ""} ${current ? "active" : ""}`}
+              aria-current={current ? "page" : undefined}
+              aria-label={unread ? `${label}, ${unread} sin leer` : label}
+              onClick={() =>
+                key === "capture"
+                  ? setCapturing(true)
+                  : key === "search"
+                    ? setCommand(true)
+                    : navigate(key)
+              }
+            >
+              <span className="bottom-bar-icon">
+                <Icon size={key === "capture" ? 22 : 20} />
+                {unread > 0 && <span className="bottom-bar-badge">{unread}</span>}
+              </span>
+              {key !== "capture" && <span>{label}</span>}
+            </button>
+          );
+        })}
+      </nav>
       {toast && (
         <div className="toast" role="status">
           <Check size={16} />
