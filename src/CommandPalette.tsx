@@ -53,7 +53,7 @@ export default function CommandPalette({
     const go = pages.filter((p) => match(p.label)).map((p) => ({ ...p, group: "Ir a" }));
     if (!term) return [...acts.slice(0, 4), ...go];
     const items = resources
-      .filter((r) => !r.deleted_at && !["notification", "comment"].includes(r.kind))
+      .filter((r) => !r.deleted_at && !["notification", "comment", "project"].includes(r.kind))
       .map((r) => {
         const body = r.kind === "document" ? documentText(r.data.content) : r.data.description || "";
         const inTitle = fold(r.title).includes(term);

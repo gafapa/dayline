@@ -22,6 +22,7 @@ const WorkspaceManager = lazy(() => import("./WorkspaceManager"));
 const PlatformAdmin = lazy(() => import("./PlatformAdmin"));
 const Setup = lazy(() => import("./Setup"));
 const InboxTriage = lazy(() => import("./Inbox"));
+const CommandPalette = lazy(() => import("./CommandPalette"));
 import Today from "./Today";
 import { normalizeTaskState } from "../shared/workflow";
 import { Auth } from "./Auth";
@@ -856,7 +857,7 @@ export default function App() {
         setConfiguringWorkflow(null);
     setConfiguringWorkflow(null);
         setMenu(false);
-        setCommand(false);
+        // The palette stays open: it closes itself when an entry is chosen.
         setProjectId(null);
         setHierarchyFocusId(null);
         setQuery("");
@@ -2147,64 +2148,55 @@ export default function App() {
         </Suspense>
       )}
       {command && (
-        <Modal
-          title="Buscar en tu espacio"
-          close={() => setCommand(false)}
-          className="command-dialog"
-        >
-          <SearchField value={query} set={setQuery} autoFocus />
-          <div className="command-results">
-            {workspace &&
-              (!query || "captura rápida".includes(query.toLowerCase())) && (
-                <button
-                  onClick={() => {
-                    setCommand(false);
-                    setCapturing(true);
-                  }}
-                >
-                  <Plus size={17} />
-                  <strong>
-                    {canEdit ? "Captura rápida" : "Recuperar captura local"}
-                  </strong>
-                  <span>Alt+Q</span>
-                </button>
-              )}
-            {query
-              ? active
-                  .filter((r) =>
-                    `${r.title} ${r.data.description || ""}`
-                      .toLowerCase()
-                      .includes(query.toLowerCase()),
-                  )
-                  .slice(0, 30)
-                  .map((r) => (
-                    <button
-                      key={r.id}
-                      onClick={() => {
-                        setCommand(false);
-                        openResource(r);
-                      }}
-                    >
-                      <span>{kindLabels[r.kind]}</span>
-                      <strong>{r.title}</strong>
-                      <ArrowRight size={14} />
-                    </button>
-                  ))
-              : navItems.map(([key, label, Icon]) => (
-                  <button
-                    key={key}
-                    onClick={() => {
-                      setCommand(false);
-                      navigate(key);
-                    }}
-                  >
-                    <Icon size={17} />
-                    {label}
-                    <ArrowRight size={14} />
-                  </button>
-                ))}
-          </div>
-        </Modal>
+        <Suspense fallback={null}>
+          <CommandPalette
+            resources={active}
+            open={openResource}
+            close={() => setCommand(false)}
+            pages={[
+              ...navItems.map(([key, label, Icon]) => ({
+                id: `page:${key}`,
+                label,
+                icon: Icon,
+                run: () => navigate(key),
+              })),
+              ...projects.map((p) => ({
+                id: `project:${p.id}`,
+                label: p.title,
+                hint: "Proyecto",
+                icon: FolderKanban,
+                run: () => navigate("tasks", p.id),
+              })),
+            ]}
+            actions={[
+              ...(workspace
+                ? [
+                    {
+                      id: "capture",
+                      label: canEdit ? "Captura rápida" : "Recuperar captura local",
+                      hint: "Apunta una idea, tarea o nota",
+                      shortcut: "Alt+Q",
+                      icon: Plus,
+                      run: () => setCapturing(true),
+                    },
+                  ]
+                : []),
+              ...(canEdit
+                ? [
+                    {
+                      id: "new-task",
+                      label: selectedProject ? `Nueva tarea en ${selectedProject.title}` : "Nueva tarea",
+                      icon: Plus,
+                      run: () => setCreating("task"),
+                    },
+                    { id: "new-doc", label: "Nuevo documento", icon: FileText, run: () => setCreating("document") },
+                    { id: "new-project", label: "Nuevo proyecto", icon: FolderKanban, run: () => setCreating("project") },
+                  ]
+                : []),
+              { id: "settings", label: "Abrir configuración", icon: Settings, run: () => navigate("settings") },
+            ]}
+          />
+        </Suspense>
       )}
       {toast && (
         <div className="toast" role="status">
