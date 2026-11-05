@@ -206,4 +206,4 @@ Each feature has a short behaviour note in `docs/`, for example [workflow states
 
 ## License
 
-No license has been chosen yet. Until one is added, all rights are reserved.
+Dayline is free software released under the [GNU General Public License v3.0 or later](LICENSE). You may use, study, share and modify it; distributed copies and derivatives must stay under the same license.
