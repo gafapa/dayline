@@ -60,19 +60,58 @@ export default function SprintWorkspace(props: Props) {
     );
   return (
     <div className="sprint-workspace">
-      <Field label="Sprint de trabajo">
-        <select
-          value={selected}
-          onChange={(event) => setSelected(event.target.value)}
-        >
-          {sprints.map((sprint) => (
-            <option key={sprint.id} value={sprint.id}>
-              {sprint.title} ·{" "}
-              {statusLabels[sprint.data.status] || "Planificado"}
-            </option>
-          ))}
-        </select>
-      </Field>
+      {(() => {
+        // The active sprint, the next three planned, the last two closed and the selected one stay visible.
+        const closed = sprints
+          .filter((s) => s.data.status === "completed")
+          .sort((a, b) => String(b.data.endDate || b.updated_at).localeCompare(String(a.data.endDate || a.updated_at)));
+        const today = new Date().toLocaleDateString("en-CA");
+        // Upcoming: planned sprints starting today or later first, by start date; stale ones after.
+        const rank = (s: Resource) =>
+          s.data.startDate && s.data.startDate >= today ? `0${s.data.startDate}` : `1${9e15 - Date.parse(s.created_at)}`;
+        const upcoming = sprints
+          .filter((s) => !["completed", "active"].includes(s.data.status))
+          .sort((a, b) => rank(a).localeCompare(rank(b)));
+        const shown = sprints.filter(
+          (s) =>
+            s.data.status === "active" ||
+            s.id === selected ||
+            upcoming.slice(0, 3).includes(s) ||
+            closed.slice(0, 2).includes(s),
+        );
+        const hidden = sprints.filter((s) => !shown.includes(s));
+        return (
+          <div className="sprint-pills" role="group" aria-label="Sprint de trabajo">
+            {shown.map((sprint) => (
+              <button
+                key={sprint.id}
+                data-sprint-id={sprint.id}
+                aria-pressed={sprint.id === selected}
+                className={`sprint-pill ${sprint.data.status || "planned"} ${sprint.id === selected ? "selected" : ""}`}
+                onClick={() => setSelected(sprint.id)}
+              >
+                {sprint.title}
+                <small>{statusLabels[sprint.data.status] || "Planificado"}</small>
+              </button>
+            ))}
+            {hidden.length > 0 && (
+              <select
+                aria-label="Otros sprints"
+                className="sprint-more"
+                value=""
+                onChange={(e) => e.target.value && setSelected(e.target.value)}
+              >
+                <option value="">Otros sprints ({hidden.length})</option>
+                {hidden.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.title}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+        );
+      })()}
       {selected && (
         <SprintDetail
           key={selected}
@@ -225,6 +264,7 @@ function SprintDetail(
           Actualizar datos
         </button>
       </header>
+      <SprintSummary sprint={sprint} tasks={plan.tasks} />
       {!online && (
         <p role="status" className="notice warning">
           La planificación compartida y las estimaciones necesitan conexión. Los
@@ -1955,5 +1995,47 @@ function BacklogChip({ task }: { task: Resource }) {
       {task.title}
       {task.data.estimate ? <small>{task.data.estimate} pt</small> : null}
     </span>
+  );
+}
+
+/** At-a-glance sprint health: points done and in progress, days left and overdue work. */
+function SprintSummary({ sprint, tasks }: { sprint: Resource; tasks: Resource[] }) {
+  const scope = tasks.filter((t) => t.data.status !== "cancelled");
+  const points = (list: Resource[]) => list.reduce((n, t) => n + (t.data.estimate || 0), 0);
+  const total = points(scope),
+    done = points(scope.filter((t) => t.data.status === "done")),
+    doing = points(scope.filter((t) => ["in_progress", "review"].includes(t.data.status)));
+  const today = new Date().toLocaleDateString("en-CA");
+  const late = scope.filter(
+    (t) => t.data.dueDate && t.data.dueDate < today && t.data.status !== "done",
+  );
+  const end = sprint.data.endDate as string | undefined;
+  const daysLeft =
+    end && end >= today
+      ? Math.round((Date.parse(end) - Date.parse(today)) / 86_400_000)
+      : null;
+  const pct = (n: number) => (total ? `${Math.round((n / total) * 100)}%` : "0%");
+  return (
+    <section className="sprint-summary" aria-label="Resumen del sprint">
+      <div className="sprint-summary-progress">
+        <p>
+          <strong>{done}</strong> de {total} puntos hechos · {doing} en curso
+        </p>
+        <div className="sprint-bar" aria-hidden="true">
+          <span className="done" style={{ width: pct(done) }} />
+          <span className="doing" style={{ width: pct(doing) }} />
+        </div>
+      </div>
+      <div className="sprint-summary-tile tone-days">
+        <small>Quedan</small>
+        <strong>
+          {daysLeft === null ? "—" : daysLeft === 0 ? "Hoy" : `${daysLeft} d`}
+        </strong>
+      </div>
+      <div className={`sprint-summary-tile ${late.length ? "tone-late-tile" : "tone-ok"}`}>
+        <small>Vencidas</small>
+        <strong>{late.length}</strong>
+      </div>
+    </section>
   );
 }

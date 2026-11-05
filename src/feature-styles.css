@@ -1076,3 +1076,46 @@
 .palette-empty { padding: 14px 10px; }
 .palette-footer { display: flex; flex-wrap: wrap; gap: 14px; margin: 0; padding: 10px 16px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); background: var(--raised); }
 .palette-footer span { display: inline-flex; align-items: center; gap: 4px; }
+/* Sprints: pills and summary. */
+.sprint-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.sprint-pill { min-height: 40px; display: inline-flex; flex-direction: column; align-items: flex-start; gap: 0; padding: 4px 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); line-height: 1.2; }
+.sprint-pill small { font-size: 11px; color: var(--muted); font-weight: 400; }
+.sprint-pill.active { border-color: color-mix(in srgb, var(--teal) 50%, var(--border)); }
+.sprint-pill.completed { opacity: 0.75; }
+.sprint-pill.selected { background: var(--sidebar); border-color: var(--sidebar); color: #fff; }
+.sprint-pill.selected small { color: var(--sidebar-muted); }
+.sprint-summary { display: grid; grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)); gap: 12px; margin: 6px 0 14px; }
+.sprint-summary-progress { padding: 12px 14px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface); }
+.sprint-summary-progress p { margin: 0 0 8px; font-size: 13px; }
+.sprint-bar { display: flex; gap: 2px; height: 10px; border-radius: 5px; overflow: hidden; background: var(--rule); }
+.sprint-bar .done { background: var(--teal); }
+.sprint-bar .doing { background: var(--amber); }
+.sprint-summary-tile { padding: 12px 14px; border-radius: 14px; display: flex; flex-direction: column; }
+.sprint-summary-tile small { font-size: 12px; font-weight: 600; }
+.sprint-summary-tile strong { font-size: 24px; font-weight: 700; line-height: 1.2; }
+.tone-days { background: var(--blue-tint); color: var(--blue-ink); }
+.tone-ok { background: var(--teal-tint); color: var(--teal-ink); }
+.tone-late-tile { background: var(--red-tint); color: var(--red-ink); }
+@media (max-width: 650px) { .sprint-summary { grid-template-columns: 1fr 1fr; } .sprint-summary-progress { grid-column: 1 / -1; } }
+/* Calendar: colour by type, week view. */
+.calendar-mode { display: inline-flex; gap: 4px; padding: 3px; border-radius: 10px; background: var(--active); margin-left: auto; }
+.calendar-mode button { min-height: 32px; border: 0; background: transparent; }
+.calendar-mode button[aria-pressed="true"] { background: var(--surface); font-weight: 600; }
+.calendar-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.calendar-day .calendar-chip { display: block; width: 100%; min-height: 0; margin: 2px 0 0; padding: 2px 6px; border: 0; border-radius: 6px; font-size: 11px; font-weight: 600; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; justify-content: flex-start; }
+.calendar-chip.task { background: var(--blue-tint); color: var(--blue-ink); }
+.calendar-chip.late { background: var(--red-tint); color: var(--red-ink); }
+.calendar-chip.done { background: var(--gray-tint); color: var(--gray-ink); text-decoration: line-through; }
+.calendar-chip.reminder { background: var(--amber-tint); color: var(--amber-ink); }
+.calendar-chip.sprint { background: var(--teal-tint); color: var(--teal-ink); }
+.calendar-grid.week .calendar-day { min-height: 320px; }
+.sprint-more { min-height: 40px; border-radius: 999px; padding: 0 12px; max-width: 220px; }
+.calendar-day .calendar-more { display: block; width: 100%; min-height: 0; margin-top: 2px; padding: 2px 6px; border: 0; background: none; color: var(--accent); font-size: 11px; font-weight: 600; text-align: left; justify-content: flex-start; }
+.calendar-day.today { display: block; gap: 0; margin-top: 0; }
+/* Roadmap timeline: colour by type and a today line. */
+.roadmap-track { position: relative; }
+.roadmap-window { background: var(--teal); border-radius: 6px; opacity: 0.85; }
+.roadmap-window.kind-release { background: var(--accent); }
+.roadmap-window.kind-milestone { background: var(--teal); }
+.roadmap-window.confirmed { opacity: 1; box-shadow: inset 0 0 0 2px color-mix(in srgb, #000 20%, transparent); }
+.roadmap-today { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: var(--coral); border-radius: 1px; pointer-events: none; z-index: 1; }

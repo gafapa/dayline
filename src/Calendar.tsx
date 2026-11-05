@@ -3,13 +3,26 @@ import { useState, type ReactNode } from "react";
 import { type Resource } from "../shared/model";
 import { dateText } from "./ui-common";
 
-export function Calendar({ tasks, open, save, canEdit }: any) {
+/**
+ * Month or week view of dated work: tasks (drag to reschedule), your reminders with their time,
+ * and sprint start and end markers.
+ */
+export function Calendar({ tasks, open, save, canEdit, reminders = [], sprints = [] }: any) {
   const [month, setMonth] = useState(
     () => new Date(new Date().getFullYear(), new Date().getMonth(), 1),
   );
-  const start = new Date(month);
-  start.setDate(1 - ((start.getDay() + 6) % 7));
-  const days = Array.from({ length: 42 }, (_, i) => {
+  const [mode, setMode] = useState<"month" | "week">("month");
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const LIMIT = 4;
+  const [weekStart, setWeekStart] = useState(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    return d;
+  });
+  const start = mode === "week" ? new Date(weekStart) : new Date(month);
+  if (mode === "month") start.setDate(1 - ((start.getDay() + 6) % 7));
+  const days = Array.from({ length: mode === "week" ? 7 : 42 }, (_, i) => {
     const d = new Date(start);
     d.setDate(d.getDate() + i);
     return d;
@@ -21,41 +34,66 @@ export function Calendar({ tasks, open, save, canEdit }: any) {
     const { dueDate: _previous, ...rest } = task.data;
     await save({ ...task, data: day ? { ...rest, dueDate: day } : rest });
   };
+  const today = iso(new Date());
+  const shift = (step: number) => {
+    if (mode === "week") {
+      const d = new Date(weekStart);
+      d.setDate(d.getDate() + step * 7);
+      setWeekStart(d);
+    } else setMonth(new Date(month.getFullYear(), month.getMonth() + step, 1));
+  };
+  const remindersOn = (day: string) =>
+    reminders
+      .filter((r: Resource) => r.data.reminder?.at && iso(new Date(r.data.reminder.at)) === day)
+      .sort((a: Resource, b: Resource) => a.data.reminder.at.localeCompare(b.data.reminder.at));
+  const sprintMarks = (day: string) =>
+    sprints.flatMap((s: Resource) => [
+      ...(s.data.startDate === day ? [{ id: `${s.id}:start`, label: `Inicio · ${s.title}`, sprint: s }] : []),
+      ...(s.data.endDate === day ? [{ id: `${s.id}:end`, label: `Fin · ${s.title}`, sprint: s }] : []),
+    ]);
   return (
     <>
       <div className="calendar-heading">
         <h2>
-          {month.toLocaleDateString("es", { month: "long", year: "numeric" })}
+          {mode === "week"
+            ? `Semana del ${weekStart.toLocaleDateString("es", { day: "numeric", month: "long" })}`
+            : month.toLocaleDateString("es", { month: "long", year: "numeric" })}
         </h2>
+        <div className="calendar-mode" role="group" aria-label="Vista del calendario">
+          {(["week", "month"] as const).map((value) => (
+            <button key={value} aria-pressed={mode === value} onClick={() => setMode(value)}>
+              {value === "week" ? "Semana" : "Mes"}
+            </button>
+          ))}
+        </div>
         <div>
           <button
-            aria-label="Mes anterior"
-            onClick={() =>
-              setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))
-            }
+            aria-label={mode === "week" ? "Semana anterior" : "Mes anterior"}
+            onClick={() => shift(-1)}
           >
             ←
           </button>
           <button
-            onClick={() =>
-              setMonth(
-                new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-              )
-            }
+            onClick={() => {
+              const now = new Date();
+              setMonth(new Date(now.getFullYear(), now.getMonth(), 1));
+              const week = new Date(now);
+              week.setHours(0, 0, 0, 0);
+              week.setDate(week.getDate() - ((week.getDay() + 6) % 7));
+              setWeekStart(week);
+            }}
           >
             Hoy
           </button>
           <button
-            aria-label="Mes siguiente"
-            onClick={() =>
-              setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))
-            }
+            aria-label={mode === "week" ? "Semana siguiente" : "Mes siguiente"}
+            onClick={() => shift(1)}
           >
             →
           </button>
         </div>
       </div>
-      <div className="calendar-grid">
+      <div className={`calendar-grid ${mode === "week" ? "week" : ""}`}>
         {[
           "Lunes",
           "Martes",
@@ -73,16 +111,59 @@ export function Calendar({ tasks, open, save, canEdit }: any) {
           <CalendarDay
             key={iso(d)}
             day={iso(d)}
-            className={`calendar-day ${d.getMonth() !== month.getMonth() ? "other-month" : ""} ${iso(d) === iso(new Date()) ? "today" : ""}`}
+            className={`calendar-day ${mode === "month" && d.getMonth() !== month.getMonth() ? "other-month" : ""} ${iso(d) === today ? "today" : ""}`}
             canEdit={canEdit}
             reschedule={reschedule}
           >
             <span>{d.getDate()}</span>
-            {tasks
-              .filter((t: Resource) => t.data.dueDate === iso(d))
-              .map((t: Resource) => (
-                <CalendarTask key={t.id} task={t} open={open} canEdit={canEdit} />
-              ))}
+            {(() => {
+              const day = iso(d);
+              const items: ReactNode[] = [
+                ...sprintMarks(day).map((m: any) => (
+                  <button key={m.id} className="calendar-chip sprint" onClick={() => open(m.sprint)}>
+                    {m.label}
+                  </button>
+                )),
+                ...remindersOn(day).map((r: Resource) => (
+                  <button key={r.id} className="calendar-chip reminder" onClick={() => open(r)}>
+                    {new Date(r.data.reminder.at).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}{" "}
+                    {r.title}
+                  </button>
+                )),
+                ...tasks
+                  .filter((t: Resource) => t.data.dueDate === day)
+                  .map((t: Resource) => (
+                    <CalendarTask
+                      key={t.id}
+                      task={t}
+                      open={open}
+                      canEdit={canEdit}
+                      tone={
+                        t.data.status === "done" || t.data.status === "cancelled"
+                          ? "done"
+                          : day < today
+                            ? "late"
+                            : "task"
+                      }
+                    />
+                  )),
+              ];
+              const all = mode === "week" || expanded === day;
+              return (
+                <>
+                  {all ? items : items.slice(0, LIMIT)}
+                  {items.length > LIMIT && mode === "month" && (
+                    <button
+                      className="calendar-more"
+                      aria-expanded={expanded === day}
+                      onClick={() => setExpanded(expanded === day ? null : day)}
+                    >
+                      {expanded === day ? "Mostrar menos" : `+${items.length - LIMIT} más`}
+                    </button>
+                  )}
+                </>
+              );
+            })()}
           </CalendarDay>
         ))}
       </div>
@@ -166,10 +247,12 @@ export function CalendarTask({
   task,
   open,
   canEdit,
+  tone = "task",
 }: {
   task: Resource;
   open: (task: Resource) => void;
   canEdit: boolean;
+  tone?: "task" | "late" | "done";
 }) {
   const drag = useDrag(
     `calendar:${task.id}`,
@@ -179,7 +262,7 @@ export function CalendarTask({
   return (
     <button
       ref={drag.ref}
-      className={drag.dragging ? "dragging" : ""}
+      className={`calendar-chip ${tone} ${drag.dragging ? "dragging" : ""}`}
       onClick={() => open(task)}
       {...drag.handle}
     >

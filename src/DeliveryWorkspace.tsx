@@ -448,7 +448,9 @@ function Roadmap({
       ),
     ),
     span = Math.max(86400000, end - start + 86400000),
-    day = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+    day = (ms: number) => new Date(ms).toISOString().slice(0, 10),
+    now = Date.parse(new Date().toISOString().slice(0, 10)),
+    todayAt = now >= start && now <= end + 86400000 ? ((now - start) / span) * 100 : null;
   return (
     <div
       className="delivery-roadmap"
@@ -493,8 +495,11 @@ function Roadmap({
                 role="img"
                 aria-label={`${dateText(day(from))} a ${dateText(day(to))}`}
               >
+                {todayAt !== null && (
+                  <span className="roadmap-today" style={{ left: `${todayAt}%` }} aria-hidden="true" />
+                )}
                 <span
-                  className={`roadmap-window ${resource.data.deliveryReceipt ? "confirmed" : ""}`}
+                  className={`roadmap-window kind-${resource.data.delivery?.type || resource.kind} ${resource.data.deliveryReceipt ? "confirmed" : ""}`}
                   style={{
                     left: `${((from - start) / span) * 100}%`,
                     width: `${Math.max(0.7, ((to - from + 86400000) / span) * 100)}%`,

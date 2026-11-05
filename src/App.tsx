@@ -1703,6 +1703,10 @@ export default function App() {
                   open={openResource}
                   save={save}
                   canEdit={canEdit}
+                  reminders={active.filter(
+                    (r) => r.kind === "reminder" && r.data.reminder?.enabled && r.created_by === user.id,
+                  )}
+                  sprints={projectId ? [] : sprints}
                 />
               )}
               {page === "team" && (

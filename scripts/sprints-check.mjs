@@ -2,6 +2,14 @@ import { chromium } from "@playwright/test";
 import { controlledByServiceWorker } from './service-worker-helper.mjs';
 import { openSection } from './navigation-helper.mjs';
 import { writeFile } from "node:fs/promises";
+/** Picks a sprint by its pill, or from 'Otros sprints' when it has no pill. */
+async function chooseSprint(target, id) {
+  const group = target.getByRole("group", { name: "Sprint de trabajo", exact: true });
+  await group.waitFor();
+  const pill = group.locator(`[data-sprint-id="${id}"]`);
+  if (await pill.count()) await pill.click();
+  else await group.getByLabel("Otros sprints", { exact: true }).selectOption(id);
+}
 const base = "http://127.0.0.1:5173",
   browser = await chromium.launch({ channel: "msedge", headless: true });
 const context = await browser.newContext({
@@ -112,9 +120,7 @@ try {
     ),
     sprint = records.resources.find((resource) => resource.title === title),
     sprintBase = `${base}/api/workspaces/${workspaceId}/sprints/${sprint.id}`;
-  await page
-    .getByLabel("Sprint de trabajo", { exact: true })
-    .selectOption(sprint.id);
+  await chooseSprint(page, sprint.id);
   await page
     .getByLabel("Añadir tarea al sprint", { exact: true })
     .selectOption(first.id);
@@ -168,9 +174,7 @@ try {
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: "Sprints", exact: true }).waitFor();
   await navigation(page, "Sprints");
-  await page
-    .getByLabel("Sprint de trabajo", { exact: true })
-    .selectOption(sprint.id);
+  await chooseSprint(page, sprint.id);
   await page
     .getByLabel("Definición de terminado del sprint", { exact: true })
     .waitFor();
@@ -260,9 +264,7 @@ try {
     .getByRole("heading", { name: "Hoy", exact: true })
     .waitFor();
   await navigation(participant, "Sprints");
-  await participant
-    .getByLabel("Sprint de trabajo", { exact: true })
-    .selectOption(sprint.id);
+  await chooseSprint(participant, sprint.id);
   await participant
     .getByRole("button", { name: "Estimación compartida", exact: true })
     .click();
