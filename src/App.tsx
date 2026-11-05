@@ -92,6 +92,12 @@ const settingsPages: Page[] = [
   "trash",
   "platform",
 ];
+/** Settings grouped by scope: your account, this workspace, the whole platform. */
+const settingsGroups: [string, Page[]][] = [
+  ["Tu cuenta", ["settings"]],
+  ["Espacio", ["team", "activity", "ai", "trash"]],
+  ["Plataforma", ["workspaces", "platform"]],
+];
 const pageGroup = (page: Page) =>
   navGroups.find((group) => group.pages.includes(page))?.pages ||
   (settingsPages.includes(page) ? settingsPages : [page]);
@@ -1260,7 +1266,10 @@ export default function App() {
             <Sparkles size={18} />
           </button>
         </header>
-        <main id="main" className="sheet">
+        <main
+          id="main"
+          className={`sheet ${settingsPages.includes(page) ? "settings-layout" : ""}`}
+        >
           {selectedProject && (
             <nav aria-label="Vistas del proyecto" className="section-tabs">
               {projectTabs.map(([key, label]) => (
@@ -1275,7 +1284,28 @@ export default function App() {
               ))}
             </nav>
           )}
-          {!selectedProject && pageGroup(page).length > 1 && (
+          {settingsPages.includes(page) && (
+            <nav aria-label="Secciones" className="settings-nav">
+              {settingsGroups.map(([label, keys]) => (
+                <div key={label} className="settings-nav-group">
+                  <p>{label}</p>
+                  {keys
+                    .filter((key) => key !== "platform" || (user as any).platformAdmin)
+                    .map((key) => (
+                      <button
+                        key={key}
+                        className={key === page ? "active" : ""}
+                        aria-current={key === page ? "page" : undefined}
+                        onClick={() => navigate(key)}
+                      >
+                        {pageTitles[key]}
+                      </button>
+                    ))}
+                </div>
+              ))}
+            </nav>
+          )}
+          {!selectedProject && !settingsPages.includes(page) && pageGroup(page).length > 1 && (
             <nav aria-label="Secciones" className="section-tabs">
               {pageGroup(page)
                 .filter((key) => key !== "platform" || (user as any).platformAdmin)
@@ -1787,6 +1817,9 @@ export default function App() {
                   />
                 </Suspense>
               )}
+              {["reports", "time"].includes(page) && (
+                <WorkKpis resources={active} projectId={projectId} />
+              )}
               {page === "reports" && (
                 <Suspense
                   fallback={<p role="status">Preparando los informes…</p>}
@@ -2261,5 +2294,42 @@ function SidebarProject({
       />
       <span>{project.title}</span>
     </button>
+  );
+}
+
+/** Four at-a-glance numbers on Informes y tiempo: completed, overdue, open and hours this week. */
+function WorkKpis({ resources, projectId }: { resources: Resource[]; projectId: string | null }) {
+  const today = new Date().toLocaleDateString("en-CA");
+  const monthAgo = new Date(Date.now() - 28 * 86_400_000).toISOString();
+  const weekStart = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    return d.toLocaleDateString("en-CA");
+  })();
+  const tasks = resources.filter(
+    (r) => r.kind === "task" && (!projectId || r.data.projectId === projectId),
+  );
+  const open = tasks.filter((t) => !["done", "cancelled"].includes(t.data.status));
+  const completed = tasks.filter((t) => t.data.status === "done" && t.updated_at >= monthAgo).length;
+  const late = open.filter((t) => t.data.dueDate && t.data.dueDate < today).length;
+  const seconds = resources
+    .filter((r) => r.kind === "time_entry" && r.data.timeLog && r.data.timeLog.date >= weekStart)
+    .reduce((n, r) => n + (r.data.timeLog.seconds || 0), 0);
+  const tiles = [
+    { label: "Completadas", value: String(completed), meta: "últimas 4 semanas", tone: "tone-time" },
+    { label: "Vencidas", value: String(late), meta: late ? "revisa prioridades" : "nada atrasado", tone: "tone-late" },
+    { label: "Abiertas", value: String(open.length), meta: "pendientes o en curso", tone: "tone-today" },
+    { label: "Horas", value: `${Math.round(seconds / 360) / 10} h`, meta: "registradas esta semana", tone: "tone-inbox" },
+  ];
+  return (
+    <section className="today-tiles work-kpis" aria-label="Indicadores">
+      {tiles.map((t) => (
+        <div key={t.label} className={`today-tile ${t.tone}`}>
+          <span className="today-tile-label">{t.label}</span>
+          <strong>{t.value}</strong>
+          <small>{t.meta}</small>
+        </div>
+      ))}
+    </section>
   );
 }

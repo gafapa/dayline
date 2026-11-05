@@ -97,7 +97,7 @@ try {
   await page.screenshot({ path: 'docs/evidence/dnd-calendar-1440.png' });
 
   phase = 'sprint: plan by dragging';
-  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.setViewportSize({ width: 1440, height: 1500 });
   const sprint = await mutate('sprint', `Sprint arrastre ${suffix}`, { status: 'planned', startDate: day(0), endDate: day(10) });
   await openSection(page, 'Sprints');
   
@@ -109,6 +109,7 @@ try {
   await expect(page.locator('.sprint-plan-task').first()).toContainText(t1.title);
   await page.screenshot({ path: 'docs/evidence/dnd-sprint-1440.png' });
 
+  await page.setViewportSize({ width: 1440, height: 1000 });
   phase = 'structure: drop a document on a folder';
   // Team documents always live in a project: put both inside Alfa and open its structure.
   const folder = await mutate('folder', `Carpeta ${suffix}`, { parentId: alpha.id, projectId: alpha.id });
