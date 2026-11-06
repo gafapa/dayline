@@ -13,7 +13,8 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react"
 import { ArrowRight, Bell, CalendarDays, Check, ChevronDown, ChevronRight, CircleCheck, FileText, Flag, FolderKanban, Inbox, LayoutDashboard, ListFilter, LoaderCircle, LogOut, Menu, MoreHorizontal, Plus, Search, Settings, Sparkles, Star, Target, Trash2, Users, WifiOff, X, History, Layers, Clock3, Sun, NotebookPen, ListTodo, BarChart3 } from "lucide-react";
 import { api, ApiError, send } from "./api";
 import { cacheSnapshot, beginSnapshotRead, flushOutbox, localSnapshot, pendingOperations, queueMutation, resolveConflict, rememberSession, rememberedSession, forgetSession } from "./storage";
-import { kindLabels, sprintStats, type Resource, type ResourceKind, type User, type Workspace } from "../shared/model";
+import { ProjectCards, projectTree } from "./ProjectCards";
+import { kindLabels, type Resource, type ResourceKind, type User, type Workspace } from "../shared/model";
 const CollaborativeEditor = lazy(() => import("./CollaborativeEditor"));
 const ProjectStructure = lazy(() => import("./ProjectStructure"));
 const CustomFieldAdmin = lazy(() => import("./CustomFieldAdmin"));
@@ -1130,15 +1131,34 @@ export default function App() {
                       </button>
                     )}
                   </p>
+                  <button
+                    className={`nav-item nav-all-projects ${page === "projects" && !projectId ? "selected" : ""}`}
+                    aria-current={page === "projects" && !projectId ? "page" : undefined}
+                    onClick={() => navigate("projects")}
+                  >
+                    <span className="nav-icon tone-projects">
+                      <FolderKanban size={16} />
+                    </span>
+                    <span>Todos los proyectos</span>
+                  </button>
                   {(() => {
                     const ids: string[] = preferences.favorites || [];
                     const favorites = ids
                       .map((id) => projects.find((p) => p.id === id))
                       .filter(Boolean) as Resource[];
-                    const list = (favorites.length ? favorites : projects).slice(0, 6);
-                    return list.map((p) => (
+                    // Favorites in your order; otherwise the project tree, subprojects indented.
+                    const tree = projectTree(projects, active);
+                    const walk = (p: Resource, depth: number): [Resource, number][] => [
+                      [p, depth],
+                      ...(depth < 2 ? tree.childrenOf(p.id).flatMap((c) => walk(c, depth + 1)) : []),
+                    ];
+                    const list: [Resource, number][] = favorites.length
+                      ? favorites.map((p) => [p, 0])
+                      : tree.roots().flatMap((p) => walk(p, 0)).slice(0, 8);
+                    return list.map(([p, depth]) => (
                       <SidebarProject
                         key={p.id}
+                        depth={depth}
                         project={p}
                         selected={projectId === p.id}
                         favorite={favorites.length > 0}
@@ -1157,16 +1177,6 @@ export default function App() {
                       />
                     ));
                   })()}
-                  <button
-                    className={`nav-item nav-all-projects ${page === "projects" && !projectId ? "selected" : ""}`}
-                    aria-current={page === "projects" && !projectId ? "page" : undefined}
-                    onClick={() => navigate("projects")}
-                  >
-                    <span className="nav-icon tone-projects">
-                      <FolderKanban size={16} />
-                    </span>
-                    <span>Todos los proyectos</span>
-                  </button>
                 </div>
               )}
             </div>
@@ -1557,102 +1567,22 @@ export default function App() {
                   ) : (
                     <>
                       <SearchField value={query} set={setQuery} />
-                      <div className="projects-grid">
-                        {projects
-                          .filter((p) =>
-                            p.title.toLowerCase().includes(query.toLowerCase()),
-                          )
-                          .map((project) => {
-                            const ownTasks = tasks.filter(
-                              (t) => t.data.projectId === project.id,
-                            );
-                            const stats = sprintStats(ownTasks);
-                            return (
-                              <article
-                                className="project-card"
-                                key={project.id}
-                              >
-                                <div className="project-card-header">
-                                  <FolderKanban size={20} />
-                                  <button
-                                    className="icon-button"
-                                    aria-label={
-                                      (preferences.favorites || []).includes(
-                                        project.id,
-                                      )
-                                        ? "Quitar de favoritos"
-                                        : "Añadir a favoritos"
-                                    }
-                                    onClick={() => toggleFavorite(project.id)}
-                                  >
-                                    <Star
-                                      size={16}
-                                      fill={
-                                        (preferences.favorites || []).includes(
-                                          project.id,
-                                        )
-                                          ? "currentColor"
-                                          : "none"
-                                      }
-                                    />
-                                  </button>
-                                </div>
-                                <button
-                                  className="card-title"
-                                  onClick={() => navigate("tasks", project.id)}
-                                >
-                                  {project.title}
-                                  <ArrowRight size={16} />
-                                </button>
-                                <p>
-                                  {project.data.description ||
-                                    "Añade el objetivo y reúne el trabajo del proyecto."}
-                                </p>
-                                <div className="progress-track">
-                                  <span
-                                    style={{ width: `${stats.percent}%` }}
-                                  />
-                                </div>
-                                <div className="project-footer">
-                                  <span>
-                                    {stats.done} de {stats.total} tareas
-                                  </span>
-                                  <span>{stats.percent}%</span>
-                                </div>
-                                <button
-                                  className="text-button"
-                                  onClick={() => openResource(project)}
-                                >
-                                  Detalles del proyecto
-                                </button>
-                                {canEdit &&
-                                  (workspace?.role === "admin" ||
-                                    project.created_by === user?.id) && (
-                                    <button
-                                      className="text-button"
-                                      onClick={() =>
-                                        setConfiguringFields(project)
-                                      }
-                                    >
-                                      Campos de tareas
-                                    </button>
-                                  )}
-                                {canEdit &&
-                                  (workspace?.role === "admin" ||
-                                    project.created_by === user?.id) && (
-                                    <button
-                                      className="text-button"
-                                      onClick={() =>
-                                        setConfiguringWorkflow(project)
-                                      }
-                                    >
-                                      Flujo de estados
-                                    </button>
-                                  )}
-                              </article>
-                            );
-                          })}
-                      </div>
+                      <ProjectCards
+                        projects={projects}
+                        resources={active}
+                        tasks={tasks}
+                        query={query}
+                        favorites={preferences.favorites || []}
+                        toggleFavorite={toggleFavorite}
+                        openProject={(id) => navigate("tasks", id)}
+                        showDetails={openResource}
+                        canManage={(project) =>
+                          canEdit &&
+                          (workspace?.role === "admin" || project.created_by === user?.id)
+                        }
+                        configureFields={setConfiguringFields}
+                        configureWorkflow={setConfiguringWorkflow}
+                      />
                       {!projects.length && (
                         <Empty
                           icon={FolderKanban}
@@ -2294,6 +2224,7 @@ export default function App() {
 /** A sidebar project: drop a task to move it here, or drag favorites to reorder them. */
 function SidebarProject({
   project,
+  depth = 0,
   selected,
   favorite,
   canEdit,
@@ -2302,6 +2233,7 @@ function SidebarProject({
   reorder,
 }: {
   project: Resource;
+  depth?: number;
   selected: boolean;
   favorite: boolean;
   canEdit: boolean;
@@ -2329,7 +2261,8 @@ function SidebarProject({
         drag.ref(node);
         drop.ref(node);
       }}
-      className={`nav-item ${selected ? "selected" : ""} ${drop.over ? "drop-over" : ""} ${drop.armed ? "drop-armed" : ""} ${drag.dragging ? "dragging" : ""}`}
+      className={`nav-item ${depth ? "nav-subproject" : ""} ${selected ? "selected" : ""} ${drop.over ? "drop-over" : ""} ${drop.armed ? "drop-armed" : ""} ${drag.dragging ? "dragging" : ""}`}
+      style={depth ? { paddingInlineStart: 12 + depth * 16 } : undefined}
       onClick={open}
       {...drag.handle}
     >

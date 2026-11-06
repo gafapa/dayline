@@ -1153,3 +1153,47 @@
   .toast { bottom: calc(84px + env(safe-area-inset-bottom)); }
   .modal.panel { padding-bottom: env(safe-area-inset-bottom); z-index: 45; }
 }
+
+/* Projects page: hierarchy cards. */
+.projects-grid { gap: 16px; align-items: start; }
+.project-card { padding: 16px; gap: 10px; border-radius: 12px; }
+.project-card-header { justify-content: flex-start; gap: 10px; color: inherit; }
+.project-card-icon { flex: none; width: 30px; height: 30px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; color: #fff; }
+.project-card .card-title { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; font-weight: 700; }
+.project-card .card-title > span { display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
+.project-card .card-title svg { flex: none; color: var(--muted); }
+.project-path { font-size: 11px; font-weight: 500; color: var(--muted); }
+.project-card p { min-height: 0; margin: 0; }
+.project-progress { display: flex; flex-direction: column; gap: 6px; }
+.project-progress .project-footer { font-size: 12px; color: var(--muted); }
+.project-children { margin: 2px 0 0; padding: 8px 0 0; border-top: 1px solid var(--border); }
+.project-children, .project-children ul { list-style: none; }
+.project-children ul { margin: 0; padding: 0 0 0 16px; border-left: 1px solid var(--border); margin-left: 7px; }
+.project-child { width: 100%; display: flex; align-items: center; gap: 6px; min-height: 34px; padding: 4px 6px; border: 0; border-radius: 8px; background: none; text-align: left; justify-content: flex-start; font-size: 13px; }
+.project-child:hover { background: var(--active); }
+.project-child svg { flex: none; color: var(--muted); }
+.project-child span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.project-child small { color: var(--muted); font-size: 11px; }
+.project-card-links { display: flex; flex-wrap: wrap; gap: 4px 14px; padding-top: 8px; border-top: 1px solid var(--border); }
+.project-card-links .text-button { font-size: 12px; color: var(--muted); padding: 0; min-height: 28px; }
+.project-card-links .text-button:hover { color: var(--accent); }
+
+/* Sidebar: subprojects indented under their parent. */
+.sidebar .nav-subproject { font-size: 13px; min-height: 36px; }
+.sidebar .nav-subproject .project-dot { width: 6px; height: 6px; opacity: 0.8; }
+.sidebar .nav-all-projects { margin-bottom: 2px; }
+
+/* Structure view: tree aligned left, lighter row actions. */
+.structure-tree-row > .drop-zone { display: flex; flex: 1; min-width: 0; }
+.structure-location, .structure-root { justify-content: flex-start; border-radius: 8px; }
+.structure-root { font-weight: 700; }
+.structure-tree-row .icon-button, .structure-tree-spacer { width: 32px; min-width: 32px; min-height: 36px; }
+.structure-location { min-height: 36px; padding: 6px 8px; }
+.structure-item { padding: 10px 0; }
+.structure-row-actions { gap: 4px; margin: 2px 0 0 28px; }
+.structure-row-actions button { min-height: 32px; padding: 4px 10px; font-size: 13px; border-color: transparent; background: none; color: var(--muted); }
+.structure-row-actions button:hover { background: var(--active); color: var(--text); }
+@media (pointer: coarse) {
+  .structure-tree-row .icon-button, .structure-tree-spacer, .structure-location, .structure-row-actions button, .project-child { min-height: 44px; }
+}
+.sidebar .nav-item.nav-subproject { min-height: 34px; padding-block: 4px; }
