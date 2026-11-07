@@ -222,7 +222,7 @@ export function ProjectList({
             ) : (
               <li>
                 <button className="project-row-add" onClick={() => setAdding(null)}>
-                  <Plus size={15} /> Nuevo proyecto
+                  <Plus size={15} /> Añadir proyecto
                 </button>
               </li>
             )

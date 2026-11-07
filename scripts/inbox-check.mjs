@@ -26,32 +26,43 @@ try {
   await page.goto(`${base}/?view=inbox&workspace=${ws}`, { waitUntil: 'domcontentloaded' });
   await page.getByText('Sincronizado', { exact: true }).waitFor();
   const item = (title) => page.locator('.triage-item').filter({ hasText: title });
-  await expect(page.getByRole('heading', { name: /Por decidir/ })).toContainText('3');
+  const detail = page.getByRole('region', { name: 'Aviso seleccionado' });
+  const decide = async (title, action) => { await item(title).click(); await detail.getByRole('button', { name: action, exact: true }).click(); };
+  const queue = page.getByRole('group', { name: 'Cola de la bandeja' });
+  await expect(queue.getByRole('button', { name: /^Por decidir/ })).toContainText('3');
 
   phase = 'plan for today';
-  await item(plan.title).getByRole('button', { name: 'Planificar para hoy', exact: true }).click();
+  await decide(plan.title, 'Planificar para hoy');
   await expect.poll(async () => (await find(task.id)).data.dueDate).toBe(today);
   await expect.poll(async () => (await find(plan.id)).data.read).toBe(true);
 
   phase = 'snooze';
-  await item(later.title).getByRole('button', { name: 'Posponer a mañana', exact: true }).click();
-  await expect(page.getByRole('heading', { name: /Pospuestos/ })).toContainText('1');
+  await decide(later.title, 'Posponer a mañana');
+  await expect(queue.getByRole('button', { name: /^Pospuestos/ })).toContainText('1');
   await expect.poll(async () => Date.parse((await find(later.id)).data.snoozedUntil) > Date.now()).toBe(true);
 
   phase = 'archive';
-  await item(done.title).getByRole('button', { name: 'Archivar', exact: true }).click();
+  // The keyboard works through the queue: E archives the selected notice.
+  await item(done.title).click();
+  await page.keyboard.press('e');
   await expect(page.getByText('Nada pendiente. Bien hecho.', { exact: true })).toBeVisible();
   await page.screenshot({ path: 'docs/evidence/inbox-1440.png' });
 
   phase = 'earlier and open';
-  await page.getByRole('button', { name: /Ver anteriores/ }).click();
-  await item(plan.title).getByRole('button', { name: 'Abrir', exact: true }).click();
+  await queue.getByRole('button', { name: /^Anteriores/ }).click();
+  await decide(plan.title, 'Abrir');
   await expect(page.locator('.resource-dialog .resource-title')).toHaveValue(task.title);
   await page.locator('.resource-dialog').getByRole('button', { name: 'Cerrar', exact: true }).first().click();
 
   phase = 'today shows the planned task';
   await openSection(page, 'Hoy');
   await expect(page.locator('.today-task').filter({ hasText: task.title })).toHaveCount(1);
+
+  phase = 'add for today in place';
+  await page.getByLabel('Añadir para hoy', { exact: true }).fill(`Para hoy en línea ${suffix}`);
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.today-task').filter({ hasText: `Para hoy en línea ${suffix}` })).toHaveCount(1);
+  await expect.poll(async () => (await (await context.request.get(`${base}/api/workspaces/${ws}/resources`)).json()).resources.find((r) => r.title === `Para hoy en línea ${suffix}`)?.data.dueDate).toBe(today);
 
   phase = 'mobile';
   await openSection(page, 'Bandeja');

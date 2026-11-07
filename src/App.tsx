@@ -24,7 +24,7 @@ const PlatformAdmin = lazy(() => import("./PlatformAdmin"));
 const Setup = lazy(() => import("./Setup"));
 const InboxTriage = lazy(() => import("./Inbox"));
 const CommandPalette = lazy(() => import("./CommandPalette"));
-import Today from "./Today";
+import Today, { todaySummary } from "./Today";
 import { normalizeTaskState } from "../shared/workflow";
 import { Auth } from "./Auth";
 import { Calendar } from "./Calendar";
@@ -1007,6 +1007,47 @@ export default function App() {
     selectedProject?.title ||
     pageTitles[page] ||
     (page === "trash" ? "Papelera" : "Configuración");
+  /** One line under the title with the numbers that matter on this page. */
+  const headingMeta = (() => {
+    if (!user || selectedProject) return "";
+    const today = new Date().toLocaleDateString("en-CA");
+    const open = (list: Resource[]) => list.filter((t) => !["done", "cancelled"].includes(t.data.status));
+    const late = (list: Resource[]) => list.filter((t) => t.data.dueDate && t.data.dueDate < today).length;
+    const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+    if (page === "overview") return todaySummary(resources, user);
+    if (page === "inbox") {
+      const n = active.filter(
+        (r) =>
+          r.kind === "notification" &&
+          r.data.assigneeId === user.id &&
+          !r.data.read &&
+          !(r.data.snoozedUntil && Date.parse(r.data.snoozedUntil) > Date.now()),
+      ).length;
+      return `${n} por decidir · planifícalo, pospónlo o archívalo`;
+    }
+    if (page === "tasks" || page === "my_tasks") {
+      const list = open(page === "my_tasks" ? tasks.filter((t) => t.data.assigneeId === user.id) : tasks);
+      const projectsWithWork = new Set(list.map((t) => t.data.projectId)).size;
+      return [
+        count(list.length, "abierta", "abiertas"),
+        page === "tasks" ? `en ${count(projectsWithWork, "proyecto", "proyectos")}` : "",
+        late(list) ? count(late(list), "vencida", "vencidas") : "",
+      ]
+        .filter(Boolean)
+        .join(" · ")
+        .replace(" · en ", " en ");
+    }
+    if (page === "projects") return count(projects.length, "proyecto", "proyectos");
+    if (page === "documents") {
+      const team = documents.filter((d) => !d.data.personalNote);
+      return count(team.length, "documento", "documentos");
+    }
+    if (page === "sprints") {
+      const current = sprints.find((s) => s.data.status === "active");
+      return current ? `${current.title} en curso${current.data.goal ? ` · ${current.data.goal}` : ""}` : "Ningún sprint en curso";
+    }
+    return "";
+  })();
   const defaultKind: ResourceKind =
     page === "projects"
       ? "project"
@@ -1119,7 +1160,8 @@ export default function App() {
                     </button>
                   );
                 })}
-              {section === "mine" && (preferences.favorites || []).length > 0 && (
+              {section === "mine" &&
+                (preferences.favorites || []).some((id: string) => projects.some((p) => p.id === id)) && (
                 <div className="project-nav">
                   <p className="nav-group">Favoritos</p>
                   {(() => {
@@ -1287,6 +1329,7 @@ export default function App() {
               {selectedProject?.data.description && (
                 <p>{selectedProject.data.description}</p>
               )}
+              {headingMeta && <p className="page-meta">{headingMeta}</p>}
             </div>
             <div className="heading-actions">
               {selectedProject && (
@@ -1310,10 +1353,12 @@ export default function App() {
                 (page !== "projects" || projectLayout === "cards") && (
                   <button
                     className="primary"
-                    onClick={() => setCreating(defaultKind)}
+                    onClick={() => (page === "overview" ? setCapturing(true) : setCreating(defaultKind))}
                   >
                     <Plus size={16} />
-                    {page === "projects"
+                    {page === "overview"
+                      ? "Capturar"
+                      : page === "projects"
                       ? "Nuevo proyecto"
                       : page === "documents"
                         ? "Nuevo documento"
@@ -1454,7 +1499,14 @@ export default function App() {
                   complete={(task) =>
                     save({ ...task, data: { ...task.data, status: "done" } })
                   }
-                  capture={() => setCapturing(true)}
+                  addToday={(title) =>
+                    create("task", title, {
+                      status: "todo",
+                      assigneeId: user.id,
+                      dueDate: new Date().toLocaleDateString("en-CA"),
+                    })
+                  }
+                  save={save}
                   canEdit={canEdit}
                 />
               )}
@@ -1483,7 +1535,7 @@ export default function App() {
                   <div className="page-toolbar">
                     {projectLayout !== "structure" && <SearchField value={query} set={setQuery} />}
                     <div
-                      className="segmented"
+                      className="segmented push-end"
                       role="group"
                       aria-label="Vista de proyectos"
                     >

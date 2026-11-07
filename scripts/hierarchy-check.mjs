@@ -229,7 +229,7 @@ try {
   // Projects list: create a project and a subproject in place, then leave the list layout selected.
   await page.getByRole("button", { name: "Lista", exact: true }).click();
   const list = page.getByRole("region", { name: "Todos los proyectos" });
-  await list.getByRole("button", { name: "Nuevo proyecto", exact: true }).click();
+  await list.getByRole("button", { name: "Añadir proyecto", exact: true }).click();
   await page.getByLabel("Nombre del nuevo proyecto", { exact: true }).fill(`Lista ${suffix}`);
   await page.keyboard.press("Enter");
   await expect(list.getByRole("button", { name: `Lista ${suffix}`, exact: true })).toBeVisible();

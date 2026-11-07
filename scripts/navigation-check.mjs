@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { controlledByServiceWorker } from './service-worker-helper.mjs';
 import { openSection } from './navigation-helper.mjs';
-import { chromium, expect } from "@playwright/test";
+import { chromium, expect as baseExpect } from "@playwright/test";
+// Deep links resolve over the network after sign-in or a context switch; on a busy machine that
+// takes longer than the 5 s default, so this check waits up to 15 s for each resolved view.
+const expect = baseExpect.configure({ timeout: 15000 });
 import { writeFile } from "node:fs/promises";
 const base = "http://127.0.0.1:5173",
   browser = await chromium.launch({ channel: "msedge", headless: true }),
