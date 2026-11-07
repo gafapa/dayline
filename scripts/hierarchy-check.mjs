@@ -226,6 +226,23 @@ try {
     path: "docs/evidence/hierarchy-desktop.png",
     fullPage: false,
   });
+  // Projects list: create a project and a subproject in place, then leave the list layout selected.
+  await page.getByRole("button", { name: "Lista", exact: true }).click();
+  const list = page.getByRole("region", { name: "Todos los proyectos" });
+  await list.getByRole("button", { name: "Nuevo proyecto", exact: true }).click();
+  await page.getByLabel("Nombre del nuevo proyecto", { exact: true }).fill(`Lista ${suffix}`);
+  await page.keyboard.press("Enter");
+  await expect(list.getByRole("button", { name: `Lista ${suffix}`, exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await list.getByRole("button", { name: `Nuevo subproyecto en Lista ${suffix}`, exact: true }).click();
+  await page.getByLabel(`Nombre del subproyecto en Lista ${suffix}`, { exact: true }).fill(`Hijo ${suffix}`);
+  await page.keyboard.press("Enter");
+  await expect(list.getByRole("button", { name: `Hijo ${suffix}`, exact: true })).toBeVisible();
+  const created = await snapshot();
+  assert.equal(
+    created.find((r) => r.title === `Hijo ${suffix}`)?.data.parentId,
+    created.find((r) => r.title === `Lista ${suffix}`)?.id,
+  );
   assert.deepEqual(errors, []);
   await writeFile(
     "docs/evidence/hierarchy-check.json",

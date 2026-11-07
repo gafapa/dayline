@@ -128,7 +128,7 @@ try {
   await page.reload({ waitUntil: "domcontentloaded" });
   await openSection(page, "Proyectos");
   await page
-    .locator(".project-card")
+    .locator(".project-row")
     .filter({
       has: page.getByRole("button", { name: projectTitle, exact: true }),
     })

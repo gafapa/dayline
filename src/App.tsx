@@ -13,7 +13,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react"
 import { ArrowRight, Bell, CalendarDays, Check, ChevronDown, ChevronRight, CircleCheck, FileText, Flag, FolderKanban, Inbox, LayoutDashboard, ListFilter, LoaderCircle, LogOut, Menu, MoreHorizontal, Plus, Search, Settings, Sparkles, Star, Target, Trash2, Users, WifiOff, X, History, Layers, Clock3, Sun, NotebookPen, ListTodo, BarChart3 } from "lucide-react";
 import { api, ApiError, send } from "./api";
 import { cacheSnapshot, beginSnapshotRead, flushOutbox, localSnapshot, pendingOperations, queueMutation, resolveConflict, rememberSession, rememberedSession, forgetSession } from "./storage";
-import { ProjectCards, projectTree } from "./ProjectCards";
+import { ProjectList } from "./ProjectList";
 import { kindLabels, type Resource, type ResourceKind, type User, type Workspace } from "../shared/model";
 const CollaborativeEditor = lazy(() => import("./CollaborativeEditor"));
 const ProjectStructure = lazy(() => import("./ProjectStructure"));
@@ -72,6 +72,7 @@ const navGroups: {
   { label: "Bandeja", icon: Inbox, pages: ["inbox"], section: "mine" },
   { label: "Mis tareas", icon: CircleCheck, pages: ["my_tasks"], section: "mine" },
   { label: "Mis notas", icon: NotebookPen, pages: ["notes"], section: "mine" },
+  { label: "Proyectos", icon: FolderKanban, pages: ["projects"], section: "team" },
   { label: "Tareas", icon: ListTodo, pages: ["tasks", "calendar"], section: "team" },
   { label: "Documentos", icon: FileText, pages: ["documents", "templates"], section: "team" },
   { label: "Planificación", icon: Flag, pages: ["sprints", "planning"], section: "team" },
@@ -1118,50 +1119,20 @@ export default function App() {
                     </button>
                   );
                 })}
-              {section === "mine" && (
+              {section === "mine" && (preferences.favorites || []).length > 0 && (
                 <div className="project-nav">
-                  <p className="nav-group">
-                    Proyectos
-                    {canEdit && (
-                      <button
-                        aria-label="Crear proyecto"
-                        onClick={() => setCreating("project")}
-                      >
-                        <Plus size={14} />
-                      </button>
-                    )}
-                  </p>
-                  <button
-                    className={`nav-item nav-all-projects ${page === "projects" && !projectId ? "selected" : ""}`}
-                    aria-current={page === "projects" && !projectId ? "page" : undefined}
-                    onClick={() => navigate("projects")}
-                  >
-                    <span className="nav-icon tone-projects">
-                      <FolderKanban size={16} />
-                    </span>
-                    <span>Todos los proyectos</span>
-                  </button>
+                  <p className="nav-group">Favoritos</p>
                   {(() => {
                     const ids: string[] = preferences.favorites || [];
                     const favorites = ids
                       .map((id) => projects.find((p) => p.id === id))
                       .filter(Boolean) as Resource[];
-                    // Favorites in your order; otherwise the project tree, subprojects indented.
-                    const tree = projectTree(projects, active);
-                    const walk = (p: Resource, depth: number): [Resource, number][] => [
-                      [p, depth],
-                      ...(depth < 2 ? tree.childrenOf(p.id).flatMap((c) => walk(c, depth + 1)) : []),
-                    ];
-                    const list: [Resource, number][] = favorites.length
-                      ? favorites.map((p) => [p, 0])
-                      : tree.roots().flatMap((p) => walk(p, 0)).slice(0, 8);
-                    return list.map(([p, depth]) => (
+                    return favorites.map((p) => (
                       <SidebarProject
                         key={p.id}
-                        depth={depth}
                         project={p}
                         selected={projectId === p.id}
-                        favorite={favorites.length > 0}
+                        favorite
                         canEdit={canEdit}
                         open={() => navigate("tasks", p.id)}
                         moveTask={async (task) => {
@@ -1280,20 +1251,6 @@ export default function App() {
           id="main"
           className={`sheet ${settingsPages.includes(page) ? "settings-layout" : ""}`}
         >
-          {selectedProject && (
-            <nav aria-label="Vistas del proyecto" className="section-tabs">
-              {projectTabs.map(([key, label]) => (
-                <button
-                  key={key}
-                  className={key === page ? "active" : ""}
-                  aria-current={key === page ? "page" : undefined}
-                  onClick={() => navigate(key, selectedProject.id)}
-                >
-                  {label}
-                </button>
-              ))}
-            </nav>
-          )}
           {settingsPages.includes(page) && (
             <nav aria-label="Secciones" className="settings-nav">
               {settingsGroups.map(([label, keys]) => (
@@ -1315,33 +1272,17 @@ export default function App() {
               ))}
             </nav>
           )}
-          {!selectedProject && !settingsPages.includes(page) && pageGroup(page).length > 1 && (
-            <nav aria-label="Secciones" className="section-tabs">
-              {pageGroup(page)
-                .filter((key) => key !== "platform" || (user as any).platformAdmin)
-                .map((key) => (
-                <button
-                  key={key}
-                  className={key === page ? "active" : ""}
-                  aria-current={key === page ? "page" : undefined}
-                  onClick={() => navigate(key)}
-                >
-                  {pageTitles[key]}
-                </button>
-              ))}
-            </nav>
-          )}
           <div className="page-heading">
             <div>
-              <div className="eyebrow">
-                {selectedProject
-                  ? "Proyecto"
-                  : new Intl.DateTimeFormat("es", {
-                      weekday: "long",
-                      day: "numeric",
-                      month: "long",
-                    }).format(new Date())}
-              </div>
+              {page === "overview" && !selectedProject && (
+                <div className="eyebrow">
+                  {new Intl.DateTimeFormat("es", {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long",
+                  }).format(new Date())}
+                </div>
+              )}
               <h1>{heading}</h1>
               {selectedProject?.data.description && (
                 <p>{selectedProject.data.description}</p>
@@ -1383,6 +1324,36 @@ export default function App() {
                 )}
             </div>
           </div>
+          {selectedProject && (
+            <nav aria-label="Vistas del proyecto" className="section-tabs">
+              {projectTabs.map(([key, label]) => (
+                <button
+                  key={key}
+                  className={key === page ? "active" : ""}
+                  aria-current={key === page ? "page" : undefined}
+                  onClick={() => navigate(key, selectedProject.id)}
+                >
+                  {label}
+                </button>
+              ))}
+            </nav>
+          )}
+          {!selectedProject && !settingsPages.includes(page) && pageGroup(page).length > 1 && (
+            <nav aria-label="Secciones" className="section-tabs">
+              {pageGroup(page)
+                .filter((key) => key !== "platform" || (user as any).platformAdmin)
+                .map((key) => (
+                <button
+                  key={key}
+                  className={key === page ? "active" : ""}
+                  aria-current={key === page ? "page" : undefined}
+                  onClick={() => navigate(key)}
+                >
+                  {pageTitles[key]}
+                </button>
+              ))}
+            </nav>
+          )}
           {navigating && <p role="status">Abriendo enlace…</p>}
           {navigationError && (
             <div className="notice error navigation-error" role="alert">
@@ -1509,29 +1480,32 @@ export default function App() {
               )}
               {page === "projects" && (
                 <>
-                  <div
-                    className="structure-view-switch"
-                    role="group"
-                    aria-label="Vista de proyectos"
-                  >
-                    <button
-                      aria-pressed={projectLayout === "cards"}
-                      onClick={() => {
-                        setProjectLayout("cards");
-                        void updatePreference({ projectLayout: "cards" });
-                      }}
+                  <div className="page-toolbar">
+                    {projectLayout !== "structure" && <SearchField value={query} set={setQuery} />}
+                    <div
+                      className="segmented"
+                      role="group"
+                      aria-label="Vista de proyectos"
                     >
-                      Tarjetas
-                    </button>
-                    <button
-                      aria-pressed={projectLayout === "structure"}
-                      onClick={() => {
-                        setProjectLayout("structure");
-                        void updatePreference({ projectLayout: "structure" });
-                      }}
-                    >
-                      Estructura
-                    </button>
+                      <button
+                        aria-pressed={projectLayout !== "structure"}
+                        onClick={() => {
+                          setProjectLayout("cards");
+                          void updatePreference({ projectLayout: "cards" });
+                        }}
+                      >
+                        Lista
+                      </button>
+                      <button
+                        aria-pressed={projectLayout === "structure"}
+                        onClick={() => {
+                          setProjectLayout("structure");
+                          void updatePreference({ projectLayout: "structure" });
+                        }}
+                      >
+                        Estructura
+                      </button>
+                    </div>
                   </div>
                   {projectLayout === "structure" && user && workspace ? (
                     <Suspense
@@ -1566,13 +1540,13 @@ export default function App() {
                     </Suspense>
                   ) : (
                     <>
-                      <SearchField value={query} set={setQuery} />
-                      <ProjectCards
+                      <ProjectList
                         projects={projects}
                         resources={active}
                         tasks={tasks}
                         query={query}
                         favorites={preferences.favorites || []}
+                        canEdit={canEdit}
                         toggleFavorite={toggleFavorite}
                         openProject={(id) => navigate("tasks", id)}
                         showDetails={openResource}
@@ -1582,6 +1556,10 @@ export default function App() {
                         }
                         configureFields={setConfiguringFields}
                         configureWorkflow={setConfiguringWorkflow}
+                        createProject={async (title, parentId) => {
+                          await create("project", title, parentId ? { parentId } : {});
+                          notify(`Proyecto «${title}» creado.`);
+                        }}
                       />
                       {!projects.length && (
                         <Empty
