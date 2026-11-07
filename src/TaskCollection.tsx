@@ -34,6 +34,7 @@ export default function TaskCollection({
   workspace,
   projectId,
   myTasks,
+  initialFilter = "",
   canEdit,
   create,
   save,
@@ -46,9 +47,10 @@ export default function TaskCollection({
   workspace: Workspace;
   projectId: string | null;
   myTasks: boolean;
+  initialFilter?: string;
   canEdit: boolean;
   create: (
-    kind: "view",
+    kind: "view" | "task",
     title: string,
     data: Record<string, any>,
   ) => Promise<Resource | undefined>;
@@ -60,6 +62,7 @@ export default function TaskCollection({
     ...defaultTaskView(),
     layout: "board",
     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    ...(initialFilter ? parseTaskQuery(initialFilter, members) : {}),
   }));
   const [filterText, setFilterText] = useState(() =>
     formatTaskQuery(config, members),
@@ -254,7 +257,55 @@ export default function TaskCollection({
   return (
     <section className="task-collection" aria-label="Colección de tareas">
       {command.recovery}
-      <div className="collection-tools">
+      <div className="page-toolbar task-toolbar">
+        <Field label="Buscar tareas">
+          <input
+            type="search"
+            value={filterText}
+            onChange={(e) => {
+              setFilterText(e.target.value);
+              patch(parseTaskQuery(e.target.value, members));
+            }}
+            placeholder="Filtra escribiendo: estado:hecho @yo vence:semana #etiqueta prioridad:alta"
+          />
+        </Field>
+        <div className="view-tabs segmented push-end" role="group" aria-label="Vista de tareas">
+          {(["list", "board"] as const).map((layout) => (
+            <button
+              key={layout}
+              aria-pressed={config.layout === layout}
+              className={config.layout === layout ? "active" : ""}
+              onClick={() => patch({ layout })}
+            >
+              {layout === "list" ? "Lista" : "Tablero"}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="task-views">
+        <span className="task-views-label">Vistas</span>
+        {(
+          [
+            ["Mías abiertas", "@yo"],
+            ["Vencidas", "vence:vencidas"],
+            ["Esta semana", "vence:semana"],
+            ["Sin asignar", "@nadie"],
+          ] as const
+        ).map(([label, text]) => (
+          <button
+            key={label}
+            className="view-chip"
+            aria-pressed={filterText.trim() === text}
+            onClick={() => {
+              const next = filterText.trim() === text ? "" : text;
+              setViewId("");
+              setFilterText(next);
+              patch(parseTaskQuery(next, members));
+            }}
+          >
+            {label}
+          </button>
+        ))}
         <Field label="Vista guardada">
           <select
             value={viewId}
@@ -314,31 +365,6 @@ export default function TaskCollection({
             Actualizar vista
           </button>
         )}
-        <div className="view-tabs">
-          {(["list", "board"] as const).map((layout) => (
-            <button
-              key={layout}
-              aria-pressed={config.layout === layout}
-              className={config.layout === layout ? "active" : ""}
-              onClick={() => patch({ layout })}
-            >
-              {layout === "list" ? "Lista" : "Tablero"}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="collection-filter-line">
-        <Field label="Buscar tareas">
-          <input
-            type="search"
-            value={filterText}
-            onChange={(e) => {
-              setFilterText(e.target.value);
-              patch(parseTaskQuery(e.target.value, members));
-            }}
-            placeholder="Filtra escribiendo: estado:hecho @yo vence:semana #etiqueta prioridad:alta"
-          />
-        </Field>
       </div>
       <details className="collection-advanced">
         <summary>Más filtros y ordenación</summary>
@@ -793,6 +819,14 @@ export default function TaskCollection({
             toggle={toggle}
             fieldColumns={config.fieldColumns}
             orderable={config.sortBy === "order" && config.direction === "asc"}
+            addTask={(title: string, column: { status: string; stateId: string | null }) =>
+              create("task", title, {
+                status: column.status,
+                ...(column.stateId ? { stateId: column.stateId } : {}),
+                ...(projectId ? { projectId } : {}),
+                ...(myTasks ? { assigneeId: user.id } : {}),
+              })
+            }
           />
         </section>
       ))}

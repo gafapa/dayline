@@ -57,6 +57,14 @@ try {
   await drag(card(t3), card(t2), { position: { y: 8 } });
   await expect.poll(async () => { const a = await find(ws, t3.id), b = await find(ws, t2.id); return typeof a.data.order === 'number' && typeof b.data.order === 'number' && a.data.order < b.data.order; }).toBe(true);
 
+  phase = 'board: add a task inside a column';
+  await page.getByRole('button', { name: 'Añadir tarea en En revisión', exact: true }).click();
+  await page.getByLabel('Título · Añadir tarea en En revisión', { exact: true }).fill(`En columna ${suffix}`);
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('region', { name: 'En revisión', exact: true }).locator('.board-task').filter({ hasText: `En columna ${suffix}` })).toHaveCount(1);
+  await expect.poll(async () => (await (await context.request.get(`${base}/api/workspaces/${ws}/resources`)).json()).resources.find((r) => r.title === `En columna ${suffix}`)?.data.status).toBe('review');
+  await page.keyboard.press('Escape');
+
   phase = 'sidebar: drop a task on a project';
   await drag(card(t2), page.getByRole('navigation', { name: 'Principal' }).locator('xpath=..').locator('.project-nav .nav-item').filter({ hasText: beta.title }));
   await expect.poll(async () => (await find(ws, t2.id)).data.projectId).toBe(beta.id);
@@ -179,6 +187,11 @@ try {
   await page.screenshot({ path: 'docs/evidence/dnd-board-390.png' });
 
   assert.equal(errors.length, 0, errors.join('\n'));
+  phase = 'reports: attention opens Tareas filtered';
+  await page.goto(`${base}/?view=reports&workspace=${ws}`, { waitUntil: 'domcontentloaded' });
+  await page.getByRole('region', { name: 'Necesita atención' }).getByRole('button', { name: /sin responsable/ }).click();
+  await expect(page.getByLabel('Buscar tareas', { exact: true })).toHaveValue('@nadie');
+
   await writeFile('docs/evidence/dnd-check.json', JSON.stringify({ verifiedAt: new Date().toISOString(), syntheticData: true, checks: { boardDefault: true, boardColumnMove: true, boardReorder: true, sidebarProjectDrop: true, favoritesReorder: true, listReorder: true, calendarDate: true, calendarUndate: true, sprintPlanDrag: true, structureMoveReview: true, attachmentFileDrop: true, typedFilter: true, documentBlockMove: true, documentImageDrop: true }, pageErrors: errors }, null, 2));
   console.info('Drag and drop verified on the board, list, sidebar, calendar, sprint plan, structure, attachments and documents.');
 } catch (error) {

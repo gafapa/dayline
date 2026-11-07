@@ -621,6 +621,8 @@ function SprintPlan({
         aria-label="Planificación del sprint"
         disabled={busy || !draftStore.ready}
       >
+        <div className="sprint-board">
+        <div className="sprint-board-plan">
         <div className="section-heading">
           <h3>
             {closed
@@ -693,6 +695,8 @@ function SprintPlan({
             )
           );
         })}
+        </div>
+        <div className="sprint-board-backlog">
         {plan.canEdit && !closed && (
           <PlanBacklog
             candidates={plan.candidates.filter(
@@ -738,6 +742,13 @@ function SprintPlan({
             </select>
           </Field>
         )}
+        </div>
+        <SprintLoad
+          capacity={capacity}
+          members={members}
+          tasks={chosen}
+        />
+        </div>
         <h3>Capacidad del equipo</h3>
         <p className="muted">
           Las horas disponibles se calculan con días, horas por día y porcentaje
@@ -2015,6 +2026,18 @@ function SprintSummary({ sprint, tasks }: { sprint: Resource; tasks: Resource[] 
       ? Math.round((Date.parse(end) - Date.parse(today)) / 86_400_000)
       : null;
   const pct = (n: number) => (total ? `${Math.round((n / total) * 100)}%` : "0%");
+  // Pace: the share of points done against the share of the sprint already elapsed.
+  const start = sprint.data.startDate as string | undefined;
+  const elapsed =
+    start && end && end > start
+      ? Math.min(1, Math.max(0, (Date.parse(today) - Date.parse(start)) / (Date.parse(end) - Date.parse(start))))
+      : null;
+  const pace =
+    elapsed === null || !total || sprint.data.status !== "active"
+      ? null
+      : done / total >= elapsed - 0.1
+        ? "En plazo"
+        : "Con retraso";
   return (
     <section className="sprint-summary" aria-label="Resumen del sprint">
       <div className="sprint-summary-progress">
@@ -2032,10 +2055,67 @@ function SprintSummary({ sprint, tasks }: { sprint: Resource; tasks: Resource[] 
           {daysLeft === null ? "—" : daysLeft === 0 ? "Hoy" : `${daysLeft} d`}
         </strong>
       </div>
+      {pace && (
+        <div className={`sprint-summary-tile ${pace === "En plazo" ? "tone-ok" : "tone-late-tile"}`}>
+          <small>Ritmo</small>
+          <strong>{pace}</strong>
+        </div>
+      )}
       <div className={`sprint-summary-tile ${late.length ? "tone-late-tile" : "tone-ok"}`}>
         <small>Vencidas</small>
         <strong>{late.length}</strong>
       </div>
+    </section>
+  );
+}
+
+/** Points planned per person against the capacity entered for them, with an overload hint. */
+function SprintLoad({
+  capacity,
+  members,
+  tasks,
+}: {
+  capacity: CapacityEntry[];
+  members: any[];
+  tasks: Resource[];
+}) {
+  const points = (list: Resource[]) => list.reduce((n, t) => n + (t.data.estimate || 0), 0);
+  const rows = capacity.map((entry) => {
+    const name = members.find((m: any) => m.id === entry.userId)?.name || "Miembro anterior";
+    const load = points(tasks.filter((t) => t.data.assigneeId === entry.userId));
+    return { id: entry.userId, name, load, cap: entry.points };
+  });
+  const unassigned = points(tasks.filter((t) => !t.data.assigneeId));
+  const over = rows.filter((r) => r.cap !== null && r.load > (r.cap as number));
+  const free = rows
+    .filter((r) => r.cap !== null && r.load < (r.cap as number))
+    .sort((a, b) => (b.cap as number) - b.load - ((a.cap as number) - a.load))[0];
+  return (
+    <section className="sprint-load" aria-label="Carga por persona">
+      <h3>Carga por persona</h3>
+      {!rows.length && <p className="muted">Añade capacidad abajo para comparar la carga de cada persona.</p>}
+      {rows.map((r) => {
+        const pct = r.cap ? Math.min(100, Math.round((r.load / r.cap) * 100)) : 0;
+        const tone = r.cap !== null && r.load > (r.cap as number) ? "over" : "";
+        return (
+          <div key={r.id} className={`sprint-load-row ${tone}`}>
+            <span>{r.name.split(" ")[0]}</span>
+            <span className="sprint-load-bar" aria-hidden="true">
+              <span style={{ width: `${r.cap ? pct : 0}%` }} />
+            </span>
+            <small>
+              {r.load}/{r.cap ?? "—"}
+            </small>
+          </div>
+        );
+      })}
+      {unassigned > 0 && <p className="muted sprint-load-note">{unassigned} puntos sin responsable.</p>}
+      {over.map((r) => (
+        <p key={r.id} className="sprint-load-warning" role="status">
+          {r.name.split(" ")[0]} supera su capacidad en {r.load - (r.cap as number)} puntos
+          {free ? `. ${free.name.split(" ")[0]} tiene ${(free.cap as number) - free.load} libres.` : "."}
+        </p>
+      ))}
     </section>
   );
 }

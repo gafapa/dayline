@@ -8,7 +8,9 @@ const initialSet=new Set(['/index.html','/manifest.webmanifest','/mark.svg','/fo
 const manifest=JSON.parse(await readFile('dist/.vite/manifest.json','utf8'));
 const visited=new Set();
 function include(key){if(visited.has(key))return;visited.add(key);const item=manifest[key];if(!item)return;if(item.file)initialSet.add('/'+item.file);for(const css of item.css||[])initialSet.add('/'+css);for(const asset of item.assets||[])if(asset.endsWith('.woff2'))initialSet.add('/'+asset);for(const imported of item.imports||[])include(imported);}
-for(const [key,item] of Object.entries(manifest))if(['src/CollaborativeEditor.tsx','src/SprintWorkspace.tsx','src/TaskCollection.tsx','src/TemplateLibrary.tsx','src/Editor.tsx','src/DeliveryWorkspace.tsx','src/ProjectStructure.tsx','src/CustomFieldAdmin.tsx','src/Reports.tsx','src/TimeTracking.tsx','src/PrivateNotes.tsx','src/NotificationSettings.tsx','src/Reminders.tsx','src/QuickCapture.tsx'].includes(item.src)||['src/CollaborativeEditor.tsx','src/SprintWorkspace.tsx','src/TaskCollection.tsx','src/TemplateLibrary.tsx','src/Editor.tsx','src/DeliveryWorkspace.tsx','src/ProjectStructure.tsx','src/CustomFieldAdmin.tsx','src/Reports.tsx','src/TimeTracking.tsx','src/PrivateNotes.tsx','src/NotificationSettings.tsx','src/Reminders.tsx','src/QuickCapture.tsx'].includes(key))include(key);
+// Every app screen loaded on demand (a lazy import under src/) is precached so it opens offline.
+// Library chunks loaded on demand (diagram renderers) stay cached on first use only.
+for(const [key,item] of Object.entries(manifest))if(item.isDynamicEntry&&(item.src||key).startsWith('src/'))include(key);
 const initial=[...initialSet];
 await writeFile('dist/sw.js',`const CACHE=${JSON.stringify(cache)};const FILES=${JSON.stringify(paths.map(p=>'/'+p.slice(5)))};const INITIAL=${JSON.stringify(initial)};
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(INITIAL))));

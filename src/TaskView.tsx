@@ -5,8 +5,9 @@ import {
   Clock3,
   CheckCheck,
   GripVertical,
+  Plus,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { applyStateOption } from "../shared/workflow";
 import { placeInOrder, useDrag, useDrop, type DragItem } from "./dnd";
 import type { Resource } from "../shared/model";
@@ -42,6 +43,7 @@ export default function TaskView({
   toggle,
   fieldColumns = [],
   orderable = false,
+  addTask,
 }: any) {
   const reorderable = canEdit && orderable;
   /** Saves `task` moved before `beforeId` in `list`, optionally into a new column. */
@@ -77,6 +79,9 @@ export default function TaskView({
             canEdit={canEdit}
             place={place}
           >
+            {addTask && canEdit && !archivedColumn(column) && (
+              <InlineAdd label={`Añadir tarea en ${column.label}`} add={(title) => addTask(title, column)} />
+            )}
             {column.tasks.map((t: Resource) => (
               <BoardCard
                 key={t.id}
@@ -98,9 +103,15 @@ export default function TaskView({
                   )}
                   <button onClick={() => open(t)}>{t.title}</button>
                 </div>
-                <small>
-                  {projects.find((p: Resource) => p.id === t.data.projectId)
-                    ?.title || "Sin proyecto"}
+                <small className="board-card-meta">
+                  <span>
+                    {projects.find((p: Resource) => p.id === t.data.projectId)?.title || "Sin proyecto"}
+                  </span>
+                  {t.data.dueDate && (
+                    <span className={t.data.dueDate < new Date().toLocaleDateString("en-CA") && !["done", "cancelled"].includes(t.data.status) ? "late" : ""}>
+                      {dateText(t.data.dueDate)}
+                    </span>
+                  )}
                 </small>
                 <TaskCustomFieldValues
                   task={t}
@@ -130,12 +141,19 @@ export default function TaskView({
         ))}
       </div>
     );
+  const listAdd =
+    addTask && canEdit ? (
+      <InlineAdd label="Añadir tarea" add={(title) => addTask(title, { status: "todo", stateId: null })} />
+    ) : null;
   if (!tasks.length)
     return (
-      <div className="inline-empty">
-        <CheckCheck size={20} />
-        <span>No hay tareas en esta vista.</span>
-      </div>
+      <>
+        <div className="inline-empty">
+          <CheckCheck size={20} />
+          <span>No hay tareas en esta vista.</span>
+        </div>
+        {listAdd}
+      </>
     );
   return (
     <div className="task-table" role="table" aria-label="Tareas">
@@ -221,6 +239,7 @@ export default function TaskView({
           </span>
         </ListRow>
       ))}
+      {listAdd}
     </div>
   );
 }
@@ -358,5 +377,46 @@ function ListRow({
       )}
       {children}
     </div>
+  );
+}
+
+/** "+ Añadir tarea" that turns into a title field: Enter creates and stays open, Escape closes. */
+function InlineAdd({ label, add }: { label: string; add: (title: string) => Promise<unknown> }) {
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [busy, setBusy] = useState(false);
+  if (!open)
+    return (
+      <button className="inline-add" aria-label={label} onClick={() => setOpen(true)}>
+        <Plus size={15} /> Añadir tarea
+      </button>
+    );
+  return (
+    <form
+      className="inline-add-form"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        const value = title.trim();
+        if (!value || busy) return;
+        setBusy(true);
+        try {
+          await add(value);
+          setTitle("");
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      <input
+        autoFocus
+        aria-label={`Título · ${label}`}
+        placeholder="Título y Enter"
+        value={title}
+        disabled={busy}
+        onChange={(e) => setTitle(e.target.value)}
+        onKeyDown={(e) => e.key === "Escape" && (setOpen(false), setTitle(""))}
+        onBlur={() => !title.trim() && setOpen(false)}
+      />
+    </form>
   );
 }

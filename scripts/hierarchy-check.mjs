@@ -243,6 +243,21 @@ try {
     created.find((r) => r.title === `Hijo ${suffix}`)?.data.parentId,
     created.find((r) => r.title === `Lista ${suffix}`)?.id,
   );
+  // Resumen tab: indicators and the subproject of the project just created.
+  await list.getByRole("button", { name: `Lista ${suffix}`, exact: true }).click();
+  await page.getByRole("navigation", { name: "Vistas del proyecto" }).getByRole("button", { name: "Resumen", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Indicadores del proyecto" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Subproyectos" }).getByRole("button", { name: `Hijo ${suffix}`, exact: true })).toBeVisible();
+  // Documentos: choose the project in the tree and create a document in place.
+  await page.getByRole("navigation", { name: "Vistas del proyecto" }).getByRole("button", { name: "Documentos", exact: true }).click();
+  await page.getByLabel(`Documento nuevo en Lista ${suffix}`, { exact: true }).fill(`Doc en línea ${suffix}`);
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("region", { name: "Documentos" }).getByRole("button", { name: new RegExp(`Doc en línea ${suffix}`) })).toBeVisible();
+  const withDoc = await snapshot();
+  assert.equal(
+    withDoc.find((r) => r.title === `Doc en línea ${suffix}`)?.data.projectId,
+    withDoc.find((r) => r.title === `Lista ${suffix}`)?.id,
+  );
   assert.deepEqual(errors, []);
   await writeFile(
     "docs/evidence/hierarchy-check.json",

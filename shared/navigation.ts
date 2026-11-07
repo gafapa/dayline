@@ -21,6 +21,7 @@ export const appPages = [
   "templates",
   "workspaces",
   "platform",
+  "summary",
 ] as const;
 export type AppPage = (typeof appPages)[number];
 const id = z.string().uuid(),

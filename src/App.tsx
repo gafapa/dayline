@@ -60,6 +60,7 @@ const pageTitles: Record<string, string> = {
   workspaces: "Espacios",
   platform: "Plataforma",
   trash: "Papelera",
+  summary: "Resumen",
 };
 /** Sidebar destinations: personal work, then team-wide views. Each groups pages shown as tabs. */
 const navGroups: {
@@ -81,6 +82,7 @@ const navGroups: {
 /** Views shown as tabs inside a project page, each filtered to that project. */
 const projectTabs: [Page, string][] = [
   ["tasks", "Tareas"],
+  ["summary", "Resumen"],
   ["calendar", "Calendario"],
   ["documents", "Documentos"],
   ["planning", "Hoja de ruta"],
@@ -105,6 +107,9 @@ const pageGroup = (page: Page) =>
   (settingsPages.includes(page) ? settingsPages : [page]);
 
 const DeliveryWorkspace = lazy(() => import("./DeliveryWorkspace"));
+const ProjectSummary = lazy(() => import("./ProjectSummary"));
+const DocumentLibrary = lazy(() => import("./DocumentLibrary"));
+const WorkOverview = lazy(() => import("./WorkOverview"));
 const Reports = lazy(() => import("./Reports"));
 const TimeTracking = lazy(() => import("./TimeTracking"));
 const PrivateNotes = lazy(() => import("./PrivateNotes"));
@@ -204,6 +209,8 @@ export default function App() {
     documents = active.filter((r) => r.kind === "document"),
     sprints = active.filter((r) => r.kind === "sprint");
   const selectedProject = projects.find((p) => p.id === projectId);
+  /** A typed filter to open Tareas with (from "Necesita atención" on Informes). */
+  const [taskPreset, setTaskPreset] = useState("");
   const contextRef = useRef({ key: "", userId: "" });
   contextRef.current = {
     key: `${user?.id || ""}:${workspaceId}`,
@@ -621,6 +628,7 @@ export default function App() {
     );
   };
   const navigate = (next: Page, id: string | null = null) => {
+    if (next !== "tasks") setTaskPreset("");
     if (!navigationGuard.current()) return;
     setSelected(null);
     writePageLocation(next, workspaceId, id || undefined);
@@ -1349,6 +1357,7 @@ export default function App() {
                   "documents",
                   "sprints",
                   "my_tasks",
+                  "summary",
                 ].includes(page) &&
                 (page !== "projects" || projectLayout === "cards") && (
                   <button
@@ -1522,6 +1531,7 @@ export default function App() {
                     workspace={workspace!}
                     projectId={projectId}
                     myTasks={page === "my_tasks"}
+                    initialFilter={taskPreset}
                     canEdit={canEdit}
                     create={create}
                     save={save}
@@ -1628,38 +1638,22 @@ export default function App() {
               )}
               {page === "documents" && (
                 <>
-                  <SearchField value={query} set={setQuery} />
-                  <div className="document-list">
-                    {documents
-                      .filter((d) => !projectId || d.data.projectId === projectId)
-                      .filter((d) =>
-                        `${d.title} ${d.data.description || ""}`
-                          .toLowerCase()
-                          .includes(query.toLowerCase()),
-                      )
-                      .map((d) => (
-                        <button
-                          className="document-row"
-                          key={d.id}
-                          onClick={() => openResource(d)}
-                        >
-                          <FileText size={22} />
-                          <div>
-                            <strong>{d.title}</strong>
-                            <p>
-                              {projects.find((p) => p.id === d.data.projectId)
-                                ?.title ||
-                                (d.data.personalNote
-                                  ? "Nota personal · Solo tu cuenta"
-                                  : "Documento del espacio")}{" "}
-                              · Actualizado {dateText(d.updated_at)}
-                            </p>
-                          </div>
-                          <ChevronRight size={16} />
-                        </button>
-                      ))}
-                  </div>
-                  {!documents.length && (
+                  {documents.some((d) => !d.data.personalNote) ? (
+                    <Suspense fallback={<p role="status">Abriendo los documentos…</p>}>
+                      <DocumentLibrary
+                        key={`${workspaceId}:${projectId || ""}`}
+                        resources={active}
+                        members={members}
+                        projectId={projectId}
+                        canEdit={canEdit}
+                        open={openResource}
+                        create={async (title, data) => {
+                          await create("document", title, data);
+                          notify(`Documento «${title}» creado.`);
+                        }}
+                      />
+                    </Suspense>
+                  ) : (
                     <Empty
                       icon={FileText}
                       title="Las buenas ideas necesitan contexto"
@@ -1686,6 +1680,33 @@ export default function App() {
                     refresh={refresh}
                   />
                 </Suspense>
+              )}
+              {page === "summary" && selectedProject && (
+                <Suspense fallback={<p role="status">Preparando el resumen…</p>}>
+                  <ProjectSummary
+                    key={selectedProject.id}
+                    project={selectedProject}
+                    resources={active}
+                    members={members}
+                    canEdit={canEdit}
+                    openProject={(id) => navigate("summary", id)}
+                    openTab={(tab) => navigate(tab, selectedProject.id)}
+                    open={openResource}
+                    createSubproject={async (title) => {
+                      await create("project", title, { parentId: selectedProject.id });
+                      notify(`Subproyecto «${title}» creado.`);
+                    }}
+                  />
+                </Suspense>
+              )}
+              {page === "summary" && !selectedProject && (
+                <Empty
+                  icon={FolderKanban}
+                  title="Elige un proyecto"
+                  description="El resumen muestra el avance, las fechas y los documentos de un proyecto."
+                  action="Ver proyectos"
+                  onAction={() => navigate("projects")}
+                />
               )}
               {page === "calendar" && (
                 <Calendar
@@ -1778,7 +1799,17 @@ export default function App() {
                 </Suspense>
               )}
               {["reports", "time"].includes(page) && (
-                <WorkKpis resources={active} projectId={projectId} />
+                <Suspense fallback={null}>
+                  <WorkOverview
+                    resources={active}
+                    projectId={projectId}
+                    compact={page === "time"}
+                    goTasks={(filter) => {
+                      setTaskPreset(filter);
+                      navigate("tasks", projectId);
+                    }}
+                  />
+                </Suspense>
               )}
               {page === "reports" && (
                 <Suspense
@@ -2305,39 +2336,3 @@ function SidebarProject({
   );
 }
 
-/** Four at-a-glance numbers on Informes y tiempo: completed, overdue, open and hours this week. */
-function WorkKpis({ resources, projectId }: { resources: Resource[]; projectId: string | null }) {
-  const today = new Date().toLocaleDateString("en-CA");
-  const monthAgo = new Date(Date.now() - 28 * 86_400_000).toISOString();
-  const weekStart = (() => {
-    const d = new Date();
-    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-    return d.toLocaleDateString("en-CA");
-  })();
-  const tasks = resources.filter(
-    (r) => r.kind === "task" && (!projectId || r.data.projectId === projectId),
-  );
-  const open = tasks.filter((t) => !["done", "cancelled"].includes(t.data.status));
-  const completed = tasks.filter((t) => t.data.status === "done" && t.updated_at >= monthAgo).length;
-  const late = open.filter((t) => t.data.dueDate && t.data.dueDate < today).length;
-  const seconds = resources
-    .filter((r) => r.kind === "time_entry" && r.data.timeLog && r.data.timeLog.date >= weekStart)
-    .reduce((n, r) => n + (r.data.timeLog.seconds || 0), 0);
-  const tiles = [
-    { label: "Completadas", value: String(completed), meta: "últimas 4 semanas", tone: "tone-time" },
-    { label: "Vencidas", value: String(late), meta: late ? "revisa prioridades" : "nada atrasado", tone: "tone-late" },
-    { label: "Abiertas", value: String(open.length), meta: "pendientes o en curso", tone: "tone-today" },
-    { label: "Horas", value: `${Math.round(seconds / 360) / 10} h`, meta: "registradas esta semana", tone: "tone-inbox" },
-  ];
-  return (
-    <section className="today-tiles work-kpis" aria-label="Indicadores">
-      {tiles.map((t) => (
-        <div key={t.label} className={`today-tile ${t.tone}`}>
-          <span className="today-tile-label">{t.label}</span>
-          <strong>{t.value}</strong>
-          <small>{t.meta}</small>
-        </div>
-      ))}
-    </section>
-  );
-}
