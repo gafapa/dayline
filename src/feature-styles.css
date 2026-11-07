@@ -687,8 +687,8 @@
 .reminder-list>button{min-height:44px}@media(max-width:640px){.reminder-composer .form-grid{grid-template-columns:1fr}}
 .quick-capture-trigger{min-width:44px;min-height:44px}.quick-capture-dialog{width:min(760px,calc(100% - 32px))}.quick-capture-dialog form{padding:24px}.quick-capture-dialog fieldset{border:0;padding:0;margin:0;min-width:0}.quick-capture-dialog input:not([type=checkbox]),.quick-capture-dialog select,.quick-capture-dialog button,.quick-capture-dialog .checklist-item{min-height:44px}.capture-scope,.capture-privacy{color:var(--muted);line-height:1.65}.capture-scope{margin:0 0 20px}.capture-privacy{margin:12px 0 20px}.capture-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0 0}.quick-capture-dialog .modal-header .icon-button{min-width:44px}.quick-capture-dialog .field select{width:100%;min-width:0}@media(max-width:640px){.quick-capture-dialog form{padding:20px}.capture-actions{grid-template-columns:1fr}}
 
-.workflow-admin-dialog .workflow-category{border:1px solid var(--border);border-radius:6px;padding:12px 16px 16px;margin:16px 0;min-width:0}.workflow-category legend{font-weight:600;padding:0 6px}.workflow-state-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;align-items:end;gap:12px;margin-bottom:12px}.workflow-state-row .field{margin:0}.workflow-state-row .checkbox-label{min-height:44px;display:flex;align-items:center;gap:8px}.workflow-state-row>.muted{min-height:44px;display:flex;align-items:center;white-space:nowrap}.workflow-state-actions{display:flex;gap:4px;align-items:center;min-height:44px}.workflow-state-actions .icon-button{min-width:44px;min-height:44px}
-@media(max-width:700px){.workflow-state-row{grid-template-columns:minmax(0,1fr) auto}.workflow-state-row .field{grid-column:1/-1}.workflow-category>button{min-height:44px}}
+.workflow-admin-dialog .workflow-category{border:1px solid var(--border);border-radius:6px;padding:12px 16px 16px;margin:16px 0;min-width:0}.workflow-category legend{font-weight:600;padding:0 6px}.workflow-state-row{display:grid;grid-template-columns:minmax(0,1fr) auto 7.5rem auto auto;align-items:end;gap:12px;margin-bottom:12px}.workflow-state-row .field{margin:0}.workflow-state-row .checkbox-label{min-height:44px;display:flex;align-items:center;gap:8px}.workflow-state-row>.muted{min-height:44px;display:flex;align-items:center;white-space:nowrap}.workflow-state-actions{display:flex;gap:4px;align-items:center;min-height:44px}.workflow-state-actions .icon-button{min-width:44px;min-height:44px}
+@media(max-width:700px){.workflow-state-row{grid-template-columns:minmax(0,1fr) auto}.workflow-state-row .field input[type=number]{width:7.5rem}.workflow-state-row .field:first-child{grid-column:1/-1}.workflow-category>button{min-height:44px}}
 /* 0.18 daily-work layout: grouped navigation, section tabs and the Hoy page. */
 .sidebar nav[aria-label="Principal"] { margin-top: 18px; }
 .sidebar nav[aria-label="Principal"] .nav-item { min-height: 40px; font-size: 14px; color: var(--text); }
@@ -1548,3 +1548,9 @@ button.library-toggle:hover { background: var(--active); }
 .sprint-summary { grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr)); }
 .sprint-board-backlog { order: 0; }
 @media (max-width: 800px) { .sprint-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } .sprint-summary-progress { grid-column: 1 / -1; } }
+
+/* Board WIP limit and Bandeja bulk archive. */
+.board-column h2 .over-limit{background:var(--red-tint);color:var(--negative);font-weight:600}
+.workflow-state-row .field input[type=number]{width:100%}
+.triage-bulk{display:flex;gap:6px;align-items:center}
+.triage-bulk + .triage-keys{margin-left:12px}

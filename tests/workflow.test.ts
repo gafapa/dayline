@@ -358,3 +358,18 @@ test("display helpers fall back to the first active state and keep archived colu
   );
 });
 
+
+test("a state's WIP limit reaches its board column and is validated", () => {
+  const id = randomUUID();
+  const project = {
+    id: randomUUID(),
+    kind: "project",
+    title: "P",
+    data: { workflowStates: [{ id, name: "Desarrollo", category: "in_progress", archived: false, limit: 3 }] },
+  } as unknown as Resource;
+  const task = { id: randomUUID(), kind: "task", title: "T", data: { projectId: project.id, status: "todo" } } as unknown as Resource;
+  const column = boardColumns([task], [project]).find((c) => c.stateId === id);
+  assert.equal(column?.limit, 3);
+  const bad = { ...project, data: { workflowStates: [{ id, name: "X", category: "todo", limit: 0 }] } } as unknown as Resource;
+  assert.equal(stateOptions(bad).some((o) => o.limit), false);
+});

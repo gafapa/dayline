@@ -156,6 +156,22 @@ export default function WorkflowAdmin({
                       />
                       Archivado
                     </label>
+                    <label className="field">
+                      <span aria-hidden="true">Límite</span>
+                      <input
+                        type="number"
+                        aria-label={`Límite de ${state.name || "este estado"}`}
+                        min={1}
+                        max={999}
+                        placeholder="Sin límite"
+                        value={state.limit ?? ""}
+                        onChange={(e) =>
+                          update(state.id, {
+                            limit: e.target.value ? Math.max(1, Math.min(999, Math.round(Number(e.target.value)))) : undefined,
+                          })
+                        }
+                      />
+                    </label>
                     <span className="muted">
                       {used === 1 ? "1 tarea" : `${used} tareas`}
                     </span>

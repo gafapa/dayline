@@ -238,11 +238,12 @@ try {
   await page.getByLabel(`Nombre del subproyecto en Lista ${suffix}`, { exact: true }).fill(`Hijo ${suffix}`);
   await page.keyboard.press("Enter");
   await expect(list.getByRole("button", { name: `Hijo ${suffix}`, exact: true })).toBeVisible();
-  const created = await snapshot();
-  assert.equal(
-    created.find((r) => r.title === `Hijo ${suffix}`)?.data.parentId,
-    created.find((r) => r.title === `Lista ${suffix}`)?.id,
-  );
+  // The row appears optimistically; wait for the server to hold the new subproject.
+  await expect.poll(async () => {
+    const created = await snapshot();
+    const parent = created.find((r) => r.title === `Lista ${suffix}`)?.id;
+    return !!parent && created.find((r) => r.title === `Hijo ${suffix}`)?.data.parentId === parent;
+  }).toBe(true);
   // Resumen tab: indicators and the subproject of the project just created.
   await list.getByRole("button", { name: `Lista ${suffix}`, exact: true }).click();
   await page.getByRole("navigation", { name: "Vistas del proyecto" }).getByRole("button", { name: "Resumen", exact: true }).click();
@@ -253,11 +254,11 @@ try {
   await page.getByLabel(`Documento nuevo en Lista ${suffix}`, { exact: true }).fill(`Doc en línea ${suffix}`);
   await page.keyboard.press("Enter");
   await expect(page.getByRole("region", { name: "Documentos" }).getByRole("button", { name: new RegExp(`Doc en línea ${suffix}`) })).toBeVisible();
-  const withDoc = await snapshot();
-  assert.equal(
-    withDoc.find((r) => r.title === `Doc en línea ${suffix}`)?.data.projectId,
-    withDoc.find((r) => r.title === `Lista ${suffix}`)?.id,
-  );
+  await expect.poll(async () => {
+    const withDoc = await snapshot();
+    const parent = withDoc.find((r) => r.title === `Lista ${suffix}`)?.id;
+    return !!parent && withDoc.find((r) => r.title === `Doc en línea ${suffix}`)?.data.projectId === parent;
+  }).toBe(true);
   assert.deepEqual(errors, []);
   await writeFile(
     "docs/evidence/hierarchy-check.json",

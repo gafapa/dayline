@@ -54,6 +54,15 @@ try {
   await expect(page.locator('.resource-dialog .resource-title')).toHaveValue(task.title);
   await page.locator('.resource-dialog').getByRole('button', { name: 'Cerrar', exact: true }).first().click();
 
+  phase = 'archive all';
+  const bulk = [await note(`Aviso masivo A ${suffix}`), await note(`Aviso masivo B ${suffix}`)];
+  await queue.getByRole('button', { name: /^Por decidir/ }).click();
+  await expect(queue.getByRole('button', { name: /^Por decidir/ })).toContainText('2');
+  await page.getByRole('button', { name: 'Archivar todo', exact: true }).click();
+  await page.getByRole('button', { name: 'Archivar 2 avisos', exact: true }).click();
+  await expect(page.getByText('Nada pendiente. Bien hecho.', { exact: true })).toBeVisible();
+  for (const n of bulk) await expect.poll(async () => (await find(n.id)).data.read).toBe(true);
+
   phase = 'today shows the planned task';
   await openSection(page, 'Hoy');
   await expect(page.locator('.today-task').filter({ hasText: task.title })).toHaveCount(1);
@@ -70,7 +79,7 @@ try {
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
   await page.screenshot({ path: 'docs/evidence/inbox-390.png' });
   assert.equal(errors.length, 0, errors.join('\n'));
-  await writeFile('docs/evidence/inbox-check.json', JSON.stringify({ verifiedAt: new Date().toISOString(), syntheticData: true, checks: { planForToday: true, snooze: true, archive: true, openInPanel: true, todayShowsPlanned: true, mobile: true }, pageErrors: errors }, null, 2));
+  await writeFile('docs/evidence/inbox-check.json', JSON.stringify({ verifiedAt: new Date().toISOString(), syntheticData: true, checks: { planForToday: true, snooze: true, archive: true, archiveAll: true, openInPanel: true, todayShowsPlanned: true, mobile: true }, pageErrors: errors }, null, 2));
   console.info('Inbox triage verified: plan for today, snooze, archive, open and Today.');
 } catch (error) {
   console.error('Failed phase:', phase);

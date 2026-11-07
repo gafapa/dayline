@@ -284,7 +284,16 @@ function BoardColumn({
       <h2>
         <StatusIcon status={column.status} />
         {column.label}
-        <span>{column.tasks.length}</span>
+        {column.limit ? (
+          <span
+            className={column.tasks.length > column.limit ? "over-limit" : ""}
+            title={`Límite: ${column.limit}`}
+          >
+            {column.tasks.length}/{column.limit}
+          </span>
+        ) : (
+          <span>{column.tasks.length}</span>
+        )}
       </h2>
       {children}
     </section>

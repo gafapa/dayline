@@ -18,13 +18,14 @@ try{
  phase='configure';await page.getByRole('button',{name:'Flujo de estados',exact:true}).first().click();await dialog().waitFor();
  await dialog().getByRole('button',{name:'Añadir estado a Por hacer',exact:true}).click();await dialog().getByLabel('Nombre del estado 1 de Por hacer',{exact:true}).fill('Triaje');
  await dialog().getByRole('button',{name:'Añadir estado a Por hacer',exact:true}).click();await dialog().getByLabel('Nombre del estado 2 de Por hacer',{exact:true}).fill('Preparada');
- await dialog().getByRole('button',{name:'Añadir estado a En revisión',exact:true}).click();await dialog().getByLabel('Nombre del estado 1 de En revisión',{exact:true}).fill('QA');
+ await dialog().getByRole('button',{name:'Añadir estado a En revisión',exact:true}).click();await dialog().getByLabel('Nombre del estado 1 de En revisión',{exact:true}).fill('QA');await dialog().getByLabel('Límite de QA',{exact:true}).fill('1');
  phase='edit states';await expect(dialog().getByLabel('Nombre del estado 2 de Por hacer',{exact:true})).toHaveValue('Preparada');
  await dialog().getByRole('button',{name:'Bajar Triaje',exact:true}).click();await expect(dialog().getByLabel('Nombre del estado 1 de Por hacer',{exact:true})).toHaveValue('Preparada');
  for(const width of [1440,768,390]){await page.setViewportSize({width,height:1000});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.screenshot({path:`docs/evidence/workflow-admin-${width}.png`});}
  await page.setViewportSize({width:1440,height:1000});
  phase='save';await dialog().getByRole('button',{name:'Guardar flujo',exact:true}).click();await dialog().waitFor({state:'hidden'});
  await expect.poll(async()=>(await snapshot(project.id))?.data.workflowStates?.map(s=>s.name).join(',')).toBe('Preparada,Triaje,QA');
+ assert.equal((await snapshot(project.id)).data.workflowStates[2].limit,1,'the WIP limit is saved with the state');
  const saved=(await snapshot(project.id)).data.workflowStates,[prepared,triage,qa]=saved;
  phase='board columns';await page.goto(`${base}/?view=tasks&workspace=${ws}&project=${project.id}`,{waitUntil:'domcontentloaded'});await page.getByText('Sincronizado',{exact:true}).waitFor();
  const boardToggle=page.getByRole('button',{name:'Tablero',exact:true});const showBoard=async()=>{await boardToggle.waitFor();if(await boardToggle.getAttribute('aria-pressed')!=='true')await boardToggle.click();};await showBoard();
@@ -33,6 +34,7 @@ try{
  phase='move to named state';await page.getByLabel(`Estado de ${task.title}`,{exact:true}).selectOption(qa.id);
  await page.getByRole('region',{name:'QA',exact:true}).getByRole('button',{name:task.title,exact:true}).waitFor();
  await expect.poll(async()=>{const t=await snapshot(task.id);return `${t?.data.status}:${t?.data.stateId}`;}).toBe(`review:${qa.id}`);
+ phase='wip limit';await page.getByRole('region',{name:'QA',exact:true}).getByText('1/1',{exact:true}).waitFor();
  phase='offline state change';await controlledByServiceWorker(page);await context.setOffline(true);
  await page.getByLabel(`Estado de ${task.title}`,{exact:true}).selectOption(triage.id);await page.getByRole('region',{name:'Triaje',exact:true}).getByRole('button',{name:task.title,exact:true}).waitFor();
  await page.reload({waitUntil:'domcontentloaded'});await showBoard();await page.getByRole('region',{name:'Triaje',exact:true}).getByRole('button',{name:task.title,exact:true}).waitFor();
@@ -40,6 +42,6 @@ try{
  await expect.poll(async()=>{const t=await snapshot(task.id);return `${t?.data.status}:${t?.data.stateId}`;},{timeout:30000}).toBe(`todo:${triage.id}`);
  for(const width of [1440,768,390]){await page.setViewportSize({width,height:1000});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.screenshot({path:`docs/evidence/workflow-board-${width}.png`});}
  assert.equal(errors.length,0,errors.join('\n'));
- await writeFile('docs/evidence/workflow-check.json',JSON.stringify({verifiedAt:new Date().toISOString(),syntheticData:true,checks:{configureNamedStates:true,reorderWithinCategory:true,namedBoardColumns:true,namedStateSelection:true,offlineStateChangeAndReload:true,reconnectPersistsCategoryAndState:true,responsiveWidths:[1440,768,390]},pageErrors:errors},null,2));
+ await writeFile('docs/evidence/workflow-check.json',JSON.stringify({verifiedAt:new Date().toISOString(),syntheticData:true,checks:{configureNamedStates:true,reorderWithinCategory:true,namedBoardColumns:true,namedStateSelection:true,wipLimitShownOnColumn:true,offlineStateChangeAndReload:true,reconnectPersistsCategoryAndState:true,responsiveWidths:[1440,768,390]},pageErrors:errors},null,2));
  console.info('Workflow configuration, named board columns, offline state changes and responsive layouts verified.');
 }catch(error){console.error('Failed phase:',phase);await page.screenshot({path:'.local/workflow-failure.png',fullPage:true}).catch(()=>{});throw error;}finally{await browser.close();}

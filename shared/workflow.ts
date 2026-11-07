@@ -9,6 +9,8 @@ export const workflowStateSchema = z
     name: z.string().trim().min(1).max(60),
     category: z.enum(taskStatuses),
     archived: z.boolean().default(false),
+    /** Work-in-progress limit shown on the board; a hint, never enforced. */
+    limit: z.number().int().min(1).max(999).optional(),
   })
   .strict();
 export type WorkflowState = z.infer<typeof workflowStateSchema>;
@@ -70,6 +72,7 @@ export type StateOption = {
   status: TaskStatus;
   stateId: string | null;
   category: TaskStatus;
+  limit?: number;
 };
 /** Ordered choices for a task in its project, keeping its current archived state selectable. */
 export function stateOptions(
@@ -99,6 +102,7 @@ export function stateOptions(
         status: category,
         stateId: state.id,
         category,
+        ...(state.limit && !state.archived ? { limit: state.limit } : {}),
       });
   }
   return options;

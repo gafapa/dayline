@@ -34,6 +34,9 @@ export default function Inbox({
   const [queue, setQueue] = useState<Queue>("pending");
   const [kind, setKind] = useState<KindFilter>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  /** "Archivar todo" asks once more before clearing the visible queue. */
+  const [confirmAll, setConfirmAll] = useState(false);
+  useEffect(() => setConfirmAll(false), [queue, kind]);
   const detailRef = useRef<HTMLElement>(null);
   const t = triage(resources, user, save);
   const projects = resources.filter((r) => r.kind === "project" && !r.deleted_at);
@@ -128,6 +131,30 @@ export default function Inbox({
             </button>
           ))}
         </div>
+        {queue !== "earlier" && list.length > 1 && (
+          <div className="triage-bulk push-end">
+            {confirmAll ? (
+              <>
+                <button
+                  className="danger"
+                  onClick={async () => {
+                    setConfirmAll(false);
+                    for (const r of list) await t.archive(r);
+                  }}
+                >
+                  Archivar {list.length} avisos
+                </button>
+                <button className="text-button" onClick={() => setConfirmAll(false)}>
+                  Cancelar
+                </button>
+              </>
+            ) : (
+              <button className="text-button" onClick={() => setConfirmAll(true)}>
+                Archivar todo
+              </button>
+            )}
+          </div>
+        )}
         <span className="triage-keys muted" aria-hidden="true">
           <kbd>J</kbd>
           <kbd>K</kbd> moverse · <kbd>H</kbd> hoy · <kbd>P</kbd> posponer · <kbd>E</kbd> archivar
