@@ -144,7 +144,7 @@ try {
   await dialog.getByRole("button", { name: "Cerrar", exact: true }).click();
   await context.setOffline(true);
   await openSection(page, "Documentos");
-  await page.getByRole("button", { name: new RegExp(downloadTitle) }).click();
+  await page.getByRole("region", { name: "Documentos", exact: true }).getByRole("button", { name: new RegExp(downloadTitle) }).click();
   await page
     .locator(".tiptap")
     .getByText("Contenido preparado antes de abrir el editor.", { exact: true })

@@ -2113,7 +2113,23 @@ function SprintLoad({
       {over.map((r) => (
         <p key={r.id} className="sprint-load-warning" role="status">
           {r.name.split(" ")[0]} supera su capacidad en {r.load - (r.cap as number)} puntos
-          {free ? `. ${free.name.split(" ")[0]} tiene ${(free.cap as number) - free.load} libres.` : "."}
+          {(() => {
+            if (!free) return ".";
+            const room = (free.cap as number) - free.load;
+            // Suggest the smallest open task of theirs that fits in the other person's free points.
+            const move = tasks
+              .filter(
+                (t) =>
+                  t.data.assigneeId === r.id &&
+                  !["done", "cancelled"].includes(t.data.status) &&
+                  (t.data.estimate || 0) > 0 &&
+                  (t.data.estimate || 0) <= room,
+              )
+              .sort((a, b) => (a.data.estimate || 0) - (b.data.estimate || 0))[0];
+            return move
+              ? `. Pasa «${move.title}» a ${free.name.split(" ")[0]}.`
+              : `. ${free.name.split(" ")[0]} tiene ${room} libres.`;
+          })()}
         </p>
       ))}
     </section>

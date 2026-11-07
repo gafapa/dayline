@@ -44,7 +44,24 @@ export default function TaskView({
   fieldColumns = [],
   orderable = false,
   addTask,
+  activeId = null,
 }: any) {
+  /** Done columns show this week's work; the rest stays behind "Ver las N". */
+  const [allDone, setAllDone] = useState<Record<string, boolean>>({});
+  const weekAgo = Date.now() - 7 * 86_400_000;
+  const recentDone = (column: Column) =>
+    column.status !== "done" || allDone[column.value]
+      ? column.tasks
+      : column.tasks.filter((t: Resource) => Date.parse(t.updated_at) >= weekAgo);
+  /** Subtasks (child tasks, else checklist items) done out of total. */
+  const progress = (t: Resource) => {
+    const children = tasks.filter((c: Resource) => c.data.parentId === t.id);
+    const total = children.length || (t.data.checklist || []).length;
+    const done = children.length
+      ? children.filter((c: Resource) => c.data.status === "done").length
+      : (t.data.checklist || []).filter((i: any) => i.done).length;
+    return total ? { done, total } : null;
+  };
   const reorderable = canEdit && orderable;
   /** Saves `task` moved before `beforeId` in `list`, optionally into a new column. */
   const place = async (
@@ -82,13 +99,14 @@ export default function TaskView({
             {addTask && canEdit && !archivedColumn(column) && (
               <InlineAdd label={`Añadir tarea en ${column.label}`} add={(title) => addTask(title, column)} />
             )}
-            {column.tasks.map((t: Resource) => (
+            {recentDone(column).map((t: Resource) => (
               <BoardCard
                 key={t.id}
                 task={t}
                 column={column}
                 canEdit={canEdit}
                 place={place}
+                active={t.id === activeId}
               >
                 <div className="task-choice">
                   {toggle && canEdit && (
@@ -113,6 +131,15 @@ export default function TaskView({
                     </span>
                   )}
                 </small>
+                {progress(t) && (
+                  <span
+                    className="board-card-progress"
+                    role="img"
+                    aria-label={`Subtareas: ${progress(t)!.done} de ${progress(t)!.total}`}
+                  >
+                    <span style={{ width: `${Math.round((progress(t)!.done / progress(t)!.total) * 100)}%` }} />
+                  </span>
+                )}
                 <TaskCustomFieldValues
                   task={t}
                   projects={projects}
@@ -137,6 +164,14 @@ export default function TaskView({
                 </div>
               </BoardCard>
             ))}
+            {recentDone(column).length < column.tasks.length && (
+              <button
+                className="text-button board-more"
+                onClick={() => setAllDone({ ...allDone, [column.value]: true })}
+              >
+                Ver las {column.tasks.length}
+              </button>
+            )}
           </BoardColumn>
         ))}
       </div>
@@ -306,12 +341,14 @@ function BoardCard({
   column,
   canEdit,
   place,
+  active = false,
   children,
 }: {
   task: Resource;
   column: Column;
   canEdit: boolean;
   place: Place;
+  active?: boolean;
   children: ReactNode;
 }) {
   const drag = useDrag(`task:${task.id}`, { type: "task", task, label: task.title }, !canEdit);
@@ -329,6 +366,7 @@ function BoardCard({
         drag.ref(node);
         drop.ref(node);
       }}
+      aria-current={active ? "true" : undefined}
       className={`board-task ${canEdit ? "draggable" : ""} ${drag.dragging ? "dragging" : ""} ${drop.over ? "drop-before" : ""}`}
       {...drag.handle}
       role="group"

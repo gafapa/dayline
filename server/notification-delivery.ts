@@ -39,6 +39,8 @@ export async function scheduleNotification(
   sourceRule?: { id: string; version: number },
   sourceReminder?: { id: string; revisionId: string },
 ) {
+  // The inbox filters by this; it travels with the notification whether queued or inserted now.
+  resource.data.notificationCategory = category;
   const settings = storedNotificationSettings(
     await preferences(tx, resource.data.assigneeId),
   );

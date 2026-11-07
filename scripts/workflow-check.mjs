@@ -40,7 +40,7 @@ try{
  await page.reload({waitUntil:'domcontentloaded'});await showBoard();await page.getByRole('region',{name:'Triaje',exact:true}).getByRole('button',{name:task.title,exact:true}).waitFor();
  await context.setOffline(false);
  await expect.poll(async()=>{const t=await snapshot(task.id);return `${t?.data.status}:${t?.data.stateId}`;},{timeout:30000}).toBe(`todo:${triage.id}`);
- for(const width of [1440,768,390]){await page.setViewportSize({width,height:1000});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.screenshot({path:`docs/evidence/workflow-board-${width}.png`});}
+ for(const width of [1440,768,390]){await page.setViewportSize({width,height:1000});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`horizontal overflow at ${width}px: `+await page.evaluate(()=>[...document.querySelectorAll('body *')].filter(e=>e.getBoundingClientRect().right>innerWidth+1&&!e.closest('.board,.section-tabs')).slice(0,4).map(e=>e.tagName+'.'+e.className).join(', ')));await page.screenshot({path:`docs/evidence/workflow-board-${width}.png`});}
  assert.equal(errors.length,0,errors.join('\n'));
  await writeFile('docs/evidence/workflow-check.json',JSON.stringify({verifiedAt:new Date().toISOString(),syntheticData:true,checks:{configureNamedStates:true,reorderWithinCategory:true,namedBoardColumns:true,namedStateSelection:true,wipLimitShownOnColumn:true,offlineStateChangeAndReload:true,reconnectPersistsCategoryAndState:true,responsiveWidths:[1440,768,390]},pageErrors:errors},null,2));
  console.info('Workflow configuration, named board columns, offline state changes and responsive layouts verified.');

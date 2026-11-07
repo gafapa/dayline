@@ -3,6 +3,7 @@ import { reminderSchema } from "./reminders.js";
 import { DOCUMENT_SEED_VERSION } from "./document-protocol.js";
 import { workflowStatesSchema } from "./workflow.js";
 import { timeLogSchema } from "./time-tracking.js";
+import { notificationCategories } from "./notifications.js";
 import { dashboardConfigSchema } from "./analytics.js";
 import { capacityPlanSchema } from "./sprints.js";
 import { deliverySchema, deliveryReceiptSchema } from "./delivery.js";
@@ -139,6 +140,8 @@ export const resourceDataSchema = z
     url: z.string().url().max(1000).or(z.literal("")).optional(),
     resolved: z.boolean().optional(),
     read: z.boolean().optional(),
+    /** Why a notification was sent (assignment, mention, reminder…). */
+    notificationCategory: z.enum(notificationCategories).optional(),
     /** Notification hidden from the inbox until this instant. */
     snoozedUntil: z.string().datetime({ offset: true }).optional(),
     /** Marks the workspace's General project, home of work without another project. */

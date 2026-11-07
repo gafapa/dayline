@@ -23,16 +23,21 @@ const periods = [
  */
 export default function WorkOverview({
   resources,
-  projectId,
+  projectId: fixedProject,
   compact = false,
   goTasks,
+  logTime,
 }: {
   resources: Resource[];
   projectId: string | null;
   compact?: boolean;
   goTasks: (filter: string) => void;
+  logTime?: () => void;
 }) {
   const [weeks, setWeeks] = useState<number>(8);
+  /** Inside a project the scope is fixed; on the workspace page it can be narrowed. */
+  const [chosenProject, setChosenProject] = useState("");
+  const projectId = fixedProject || chosenProject || null;
   const now = Date.now();
   const today = iso(now);
   const thisWeek = weekStart(now);
@@ -49,6 +54,26 @@ export default function WorkOverview({
   const change = previous ? Math.round(((completed - previous) / previous) * 100) : null;
   const late = open.filter((t) => t.data.dueDate && t.data.dueDate < today);
   const unassigned = open.filter((t) => !t.data.assigneeId);
+  // Blocked: waiting on an unfinished dependency and untouched for more than five days.
+  const byId = new Map(resources.map((r) => [r.id, r]));
+  const blocked = open.filter(
+    (t) =>
+      (t.data.dependencies || []).some((id: string) => {
+        const dep = byId.get(id);
+        return dep && !["done", "cancelled"].includes(dep.data.status);
+      }) && now - Date.parse(t.updated_at) > 5 * DAY,
+  );
+  // Over capacity: in the active sprint, planned points above the capacity entered for a person.
+  const sprint = resources.find((r) => r.kind === "sprint" && r.data.status === "active");
+  const overloaded = sprint
+    ? (sprint.data.capacityPlan || []).filter((entry: any) => {
+        if (entry.points === null || entry.points === undefined) return false;
+        const load = resources
+          .filter((t) => t.kind === "task" && t.data.sprintId === sprint.id && t.data.assigneeId === entry.userId)
+          .reduce((n, t) => n + (t.data.estimate || 0), 0);
+        return load > entry.points;
+      }).length
+    : 0;
   const entries = resources.filter((r) => r.kind === "time_entry" && r.data.timeLog?.date);
   const projectOf = (entry: Resource) =>
     entry.data.projectId || resources.find((r) => r.id === entry.data.targetId)?.data.projectId;
@@ -90,14 +115,60 @@ export default function WorkOverview({
       </div>
     </section>
   );
+  const exportCsv = () => {
+    const cell = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
+    const rows = [
+      ["Indicador", "Valor"],
+      ["Completadas", completed],
+      ["Vencidas", late.length],
+      ["Ciclo medio (días)", cycle ?? ""],
+      ["Horas", hours],
+      [],
+      ["Proyecto", "Horas", "Tareas hechas"],
+      ...projects
+        .filter((p) => !projectId || p.id === projectId)
+        .map((p) => [
+          p.title,
+          Math.round(seconds(inPeriod.filter((e) => projectOf(e) === p.id)) / 360) / 10,
+          doneIn(from, now + DAY).filter((t) => t.data.projectId === p.id).length,
+        ]),
+    ];
+    const blob = new Blob(["\ufeff" + rows.map((r) => r.map(cell).join(";")).join("\n")], { type: "text/csv" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `informe-${today}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
   const periodSwitch = (
-    <div className="segmented push-end" role="group" aria-label="Periodo">
-      {periods.map(([n, label]) => (
-        <button key={n} aria-pressed={weeks === n} onClick={() => setWeeks(n)}>
-          {label}
+    <>
+      {!fixedProject && (
+        <label className="work-project">
+          <span>Proyecto</span>
+          <select value={chosenProject} onChange={(e) => setChosenProject(e.target.value)}>
+            <option value="">Todos los proyectos</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.title}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      <div className="segmented push-end" role="group" aria-label="Periodo">
+        {periods.map(([n, label]) => (
+          <button key={n} aria-pressed={weeks === n} onClick={() => setWeeks(n)}>
+            {label}
+          </button>
+        ))}
+      </div>
+      <button onClick={exportCsv}>Exportar CSV</button>
+      {logTime && (
+        <button className="primary" onClick={logTime}>
+          Registrar tiempo
         </button>
-      ))}
-    </div>
+      )}
+    </>
   );
   if (compact)
     return (
@@ -184,7 +255,7 @@ export default function WorkOverview({
           )}
         </section>
       </div>
-      {(late.length > 0 || unassigned.length > 0) && (
+      {(late.length > 0 || unassigned.length > 0 || overloaded > 0 || blocked.length > 0) && (
         <section className="work-attention" aria-label="Necesita atención">
           <strong>Necesita atención</strong>
           {late.length > 0 && (
@@ -196,6 +267,16 @@ export default function WorkOverview({
             <button className="text-button" onClick={() => goTasks("@nadie")}>
               {unassigned.length} sin responsable
             </button>
+          )}
+          {overloaded > 0 && (
+            <span className="work-attention-item">
+              {overloaded} {overloaded === 1 ? "persona" : "personas"} por encima de su capacidad
+            </span>
+          )}
+          {blocked.length > 0 && (
+            <span className="work-attention-item">
+              {blocked.length} {blocked.length === 1 ? "bloqueada" : "bloqueadas"} más de 5 días
+            </span>
           )}
         </section>
       )}

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Archive, ArrowUpRight, Bell, CalendarCheck, Clock3, FileText, Inbox as InboxIcon, ListTodo } from "lucide-react";
+import { Fragment, useEffect, useRef, useState } from "react";
+import { Archive, ArrowUpRight, Bell, CalendarCheck, CalendarDays, Clock3, FileText, Inbox as InboxIcon, ListTodo } from "lucide-react";
 import type { Resource, User } from "../shared/model";
 import { kindLabels } from "../shared/model";
 import { stateLabel } from "../shared/workflow";
@@ -13,7 +13,24 @@ const dayText = (day: string) => {
   return new Intl.DateTimeFormat("es", { weekday: "short", day: "numeric", month: "short" }).format(new Date(y, m - 1, d));
 };
 type Queue = "pending" | "later" | "earlier";
+/** List headings: today, the last seven days, older. */
+const arrivalGroup = (iso: string) => {
+  const day = new Date(iso).toLocaleDateString("en-CA");
+  const today = new Date().toLocaleDateString("en-CA");
+  if (day === today) return "Hoy";
+  return Date.now() - Date.parse(iso) < 7 * 86_400_000 ? "Esta semana" : "Antes";
+};
 type KindFilter = "all" | "task" | "document" | "other";
+type ReasonFilter = "all" | "assignment" | "mention" | "dates";
+/** Why a notice arrived; older notices without a stored category are read from their title. */
+const reasonOf = (r: Resource): ReasonFilter | "other" => {
+  const c = r.data.notificationCategory || "";
+  const title = r.title.toLowerCase();
+  if (["assignment", "review"].includes(c) || (!c && /asignad|revisión/.test(title))) return "assignment";
+  if (["mention", "comment"].includes(c) || (!c && /mencionado|comentario/.test(title))) return "mention";
+  if (c === "reminder" || (!c && /recordatorio|vence|venció/.test(title))) return "dates";
+  return "other";
+};
 
 /**
  * Inbox as a triage queue in master–detail: the list on the left, the selected notice on the
@@ -32,10 +49,13 @@ export default function Inbox({
   open: (resource: Resource) => void;
 }) {
   const [queue, setQueue] = useState<Queue>("pending");
-  const [kind, setKind] = useState<KindFilter>("all");
+  const [kind, setKind] = useState<ReasonFilter>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   /** "Archivar todo" asks once more before clearing the visible queue. */
   const [confirmAll, setConfirmAll] = useState(false);
+  /** "Elegir fecha…" shows a date field for the selected notice's task. */
+  const [choosingDate, setChoosingDate] = useState(false);
+  useEffect(() => setChoosingDate(false), [selectedId]);
   useEffect(() => setConfirmAll(false), [queue, kind]);
   const detailRef = useRef<HTMLElement>(null);
   const t = triage(resources, user, save);
@@ -52,7 +72,7 @@ export default function Inbox({
     const k = t.target(r)?.kind;
     return k === "task" || k === "document" ? k : "other";
   };
-  const list = queues[queue].filter((r) => kind === "all" || kindOf(r) === kind);
+  const list = queues[queue].filter((r) => kind === "all" || reasonOf(r) === kind);
   const selected = list.find((r) => r.id === selectedId) || list[0];
   useEffect(() => {
     if (selected && selected.id !== selectedId) setSelectedId(selected.id);
@@ -101,6 +121,18 @@ export default function Inbox({
   const item = selected ? t.target(selected) : undefined;
   const project = item ? projects.find((p) => p.id === (item.kind === "project" ? item.id : item.data.projectId)) : undefined;
   const sprint = item?.data.sprintId ? resources.find((r) => r.id === item.data.sprintId) : undefined;
+  const live = resources.filter((r) => !r.deleted_at);
+  const blocks = item
+    ? live.filter((r) => r.kind === "task" && (r.data.dependencies || []).includes(item.id))
+    : [];
+  const docs = item
+    ? live.filter(
+        (r) =>
+          r.kind === "document" &&
+          r.id !== item.id &&
+          ((item.data.related || []).includes(r.id) || (r.data.related || []).includes(item.id)),
+      )
+    : [];
   const KindIcon = (r: Resource) => (kindOf(r) === "task" ? ListTodo : kindOf(r) === "document" ? FileText : Bell);
   const queueLabels: [Queue, string][] = [
     ["pending", "Por decidir"],
@@ -121,10 +153,10 @@ export default function Inbox({
           {(
             [
               ["all", "Todo"],
-              ["task", "Tareas"],
-              ["document", "Documentos"],
-              ["other", "Otros"],
-            ] as [KindFilter, string][]
+              ["assignment", "Asignaciones"],
+              ["mention", "Menciones"],
+              ["dates", "Fechas"],
+            ] as [ReasonFilter, string][]
           ).map(([key, label]) => (
             <button key={key} aria-pressed={kind === key} onClick={() => setKind(key)}>
               {label}
@@ -168,11 +200,15 @@ export default function Inbox({
       ) : (
         <div className="triage-layout">
           <section className="triage-list" aria-label="Avisos">
-            {list.map((r) => {
+            {list.map((r, index) => {
               const Icon = KindIcon(r);
+              const group = arrivalGroup(r.created_at);
               return (
+                <Fragment key={r.id}>
+                {(index === 0 || arrivalGroup(list[index - 1].created_at) !== group) && (
+                  <p className="triage-group">{group}</p>
+                )}
                 <button
-                  key={r.id}
                   className={`triage-item ${r.data.read ? "done" : ""}`}
                   aria-current={r.id === selected?.id ? "true" : undefined}
                   onClick={() => {
@@ -193,6 +229,7 @@ export default function Inbox({
                     {isSnoozed(r) ? `vuelve ${when(r.data.snoozedUntil)}` : when(r.created_at)}
                   </small>
                 </button>
+                </Fragment>
               );
             })}
           </section>
@@ -229,6 +266,36 @@ export default function Inbox({
                       <dd>{sprint.title}</dd>
                     </div>
                   )}
+                  {blocks.length > 0 && (
+                    <div>
+                      <dt>Bloquea a</dt>
+                      <dd>
+                        {blocks.map((b, i) => (
+                          <span key={b.id}>
+                            {i > 0 && ", "}
+                            <button className="text-button" onClick={() => open(b)}>
+                              {b.title}
+                            </button>
+                          </span>
+                        ))}
+                      </dd>
+                    </div>
+                  )}
+                  {docs.length > 0 && (
+                    <div>
+                      <dt>Documentos</dt>
+                      <dd>
+                        {docs.map((d, i) => (
+                          <span key={d.id}>
+                            {i > 0 && ", "}
+                            <button className="text-button" onClick={() => open(d)}>
+                              {d.title}
+                            </button>
+                          </span>
+                        ))}
+                      </dd>
+                    </div>
+                  )}
                   {typeof item.data.estimate === "number" && (
                     <div>
                       <dt>Estimación</dt>
@@ -257,6 +324,23 @@ export default function Inbox({
                     Posponer a mañana
                   </button>
                 )}
+                {t.plannable(selected) &&
+                  (choosingDate ? (
+                    <input
+                      type="date"
+                      autoFocus
+                      aria-label={`Fecha para ${t.plannable(selected)!.title}`}
+                      onChange={(e) => {
+                        const due = e.target.value;
+                        if (due) void decide((r) => t.planOn(r, due));
+                      }}
+                    />
+                  ) : (
+                    <button onClick={() => setChoosingDate(true)}>
+                      <CalendarDays size={15} />
+                      Elegir fecha…
+                    </button>
+                  ))}
                 {!selected.data.read && (
                   <button onClick={() => void decide(t.archive)}>
                     <Archive size={15} />

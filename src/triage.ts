@@ -37,6 +37,12 @@ export function triage(resources: Resource[], user: User, save: (r: Resource) =>
       if (item) await save({ ...item, data: { ...item.data, dueDate: localDay() } });
       await archive(r);
     },
+    /** Gives the linked task a due date and archives the notice. */
+    planOn: async (r: Resource, dueDate: string) => {
+      const item = plannable(r);
+      if (item) await save({ ...item, data: { ...item.data, dueDate } });
+      await archive(r);
+    },
     snooze: (r: Resource) => save({ ...r, data: { ...r.data, snoozedUntil: tomorrowMorning() } }),
   };
 }

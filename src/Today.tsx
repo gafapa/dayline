@@ -41,6 +41,8 @@ const timeOf = (iso: string) =>
  * for a decision, the clock and the week.
  */
 export default function Today({
+  planning = false,
+  closePlanning = () => {},
   resources,
   projects,
   user,
@@ -51,6 +53,8 @@ export default function Today({
   save,
   canEdit,
 }: {
+  planning?: boolean;
+  closePlanning?: () => void;
   resources: Resource[];
   projects: Resource[];
   user: User;
@@ -214,8 +218,50 @@ export default function Today({
     setDraft("");
   };
 
+  // "Planificar el día": your open work that is overdue or has no date, to give it a day.
+  const toPlan = mine.filter((task) => !task.data.dueDate || task.data.dueDate < today);
+  const plan = (task: Resource, dueDate: string) => save({ ...task, data: { ...task.data, dueDate } });
+
   return (
     <div className="today">
+      {planning && (
+        <section className="today-plan" aria-label="Planificar el día">
+          <div className="today-card-head">
+            <h2>Planificar el día</h2>
+            <button className="text-button" onClick={closePlanning}>
+              Listo
+            </button>
+          </div>
+          <p className="muted">
+            {toPlan.length
+              ? "Tu trabajo vencido o sin fecha. Elige cuándo hacerlo."
+              : "Todo tu trabajo abierto tiene fecha. Nada que planificar."}
+          </p>
+          {toPlan.length > 0 && (
+            <ul>
+              {toPlan.slice(0, 12).map((task) => (
+                <li key={task.id}>
+                  <button className="today-task-main" onClick={() => open(task)}>
+                    <strong>{task.title}</strong>
+                  </button>
+                  <span className="today-project">{projectTitle(task)}</span>
+                  <span className={`today-due ${task.data.dueDate ? "late" : ""}`}>{dueLabel(task.data.dueDate)}</span>
+                  {canEdit && (
+                    <span className="today-decide-actions">
+                      <button aria-label={`Hoy: ${task.title}`} onClick={() => void plan(task, today)}>
+                        Hoy
+                      </button>
+                      <button aria-label={`Mañana: ${task.title}`} onClick={() => void plan(task, addDays(today, 1))}>
+                        Mañana
+                      </button>
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
       <div className="today-layout">
         <section className="today-tasks" aria-label="Agenda de hoy">
           {groups[0].items.length > 0 && (

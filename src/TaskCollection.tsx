@@ -40,7 +40,9 @@ export default function TaskCollection({
   save,
   refresh,
   open,
+  activeId = null,
 }: {
+  activeId?: string | null;
   resources: Resource[];
   members: { id: string; name: string }[];
   user: User;
@@ -128,19 +130,23 @@ export default function TaskCollection({
   const customBulkDefinition = bulkField.startsWith("custom:")
     ? bulkDefinitions.find((f) => f.id === bulkField.slice(7))
     : undefined;
-  const tasks = useMemo(
+  const scoped = useMemo(
     () =>
-      filterTaskView(
-        resources.filter(
-          (r) =>
-            (!projectId || r.data.projectId === projectId) &&
-            (!myTasks || r.data.assigneeId === user.id),
-        ),
-        config,
-        user.id,
+      resources.filter(
+        (r) =>
+          (!projectId || r.data.projectId === projectId) &&
+          (!myTasks || r.data.assigneeId === user.id),
       ),
-    [resources, projectId, myTasks, config, user.id],
+    [resources, projectId, myTasks, user.id],
   );
+  const tasks = useMemo(() => filterTaskView(scoped, config, user.id), [scoped, config, user.id]);
+  /** How many tasks each quick view would show, so the chips carry a count. */
+  const presetCount = (text: string) =>
+    filterTaskView(
+      scoped,
+      { ...defaultTaskView(), timeZone: config.timeZone, ...parseTaskQuery(text, members) },
+      user.id,
+    ).length;
   const patch = (value: Partial<TaskViewConfig>) => {
     setConfig((c) => ({ ...c, ...value }));
     setLimit(100);
@@ -304,6 +310,9 @@ export default function TaskCollection({
             }}
           >
             {label}
+            <span className="view-chip-count" aria-hidden="true">
+              {presetCount(text)}
+            </span>
           </button>
         ))}
         <Field label="Vista guardada">
@@ -813,6 +822,7 @@ export default function TaskCollection({
             members={members}
             mode={config.layout}
             open={open}
+            activeId={activeId}
             update={save}
             canEdit={canEdit}
             selected={selected}

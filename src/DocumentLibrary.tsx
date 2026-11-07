@@ -6,7 +6,7 @@ import { structureParent } from "../shared/hierarchy";
 import { projectTree } from "./ProjectList";
 import { SearchField } from "./ui-common";
 
-type Place = { kind: "all" | "recent" } | { kind: "project" | "folder"; id: string };
+type Place = { kind: "all" | "recent" | "shared" } | { kind: "project" | "folder"; id: string };
 const short = (iso: string) =>
   new Intl.DateTimeFormat("es", { day: "numeric", month: "short" }).format(new Date(iso));
 
@@ -22,7 +22,11 @@ export default function DocumentLibrary({
   canEdit,
   open,
   create,
+  userId,
+  fromTemplate,
 }: {
+  userId: string;
+  fromTemplate?: () => void;
   resources: Resource[];
   members: { id: string; name: string }[];
   projectId: string | null;
@@ -40,6 +44,17 @@ export default function DocumentLibrary({
   const folders = resources.filter((r) => r.kind === "folder");
   const documents = resources.filter((r) => r.kind === "document" && !r.data.personalNote);
   const tree = projectTree(projects, resources);
+  /** Someone else's document that names you as member, follower or reviewer. */
+  const sharedWithMe = (d: Resource) =>
+    d.created_by !== userId &&
+    [...(d.data.members || []), ...(d.data.followers || []), ...(d.data.reviewers || [])].includes(userId);
+  /** The task a document is linked to, either way round. */
+  const linkedTask = (d: Resource) =>
+    resources.find(
+      (r) =>
+        r.kind === "task" &&
+        ((d.data.related || []).includes(r.id) || (r.data.related || []).includes(d.id)),
+    );
   const within = (doc: Resource, id: string) => {
     for (let cursor = structureParent(doc), n = 0; cursor && n < 64; n++) {
       if (cursor === id) return true;
@@ -52,7 +67,9 @@ export default function DocumentLibrary({
       ? d.data.projectId === place.id
       : place.kind === "folder"
         ? within(d, place.id)
-        : true,
+        : place.kind === "shared"
+          ? sharedWithMe(d)
+          : true,
   );
   const needle = query.trim().toLowerCase();
   const shown = scoped
@@ -96,6 +113,8 @@ export default function DocumentLibrary({
       : current.title
     : place.kind === "recent"
       ? "Recientes"
+      : place.kind === "shared"
+        ? "Compartidos conmigo"
       : "Todos los documentos";
 
   const folderNodes = (parentId: string, depth: number): React.ReactNode =>
@@ -175,6 +194,14 @@ export default function DocumentLibrary({
         >
           <span>Recientes</span>
         </button>
+        <button
+          className="library-node"
+          aria-current={place.kind === "shared" ? "true" : undefined}
+          onClick={() => setPlace({ kind: "shared" })}
+        >
+          <span>Compartidos conmigo</span>
+          <small>{documents.filter(sharedWithMe).length}</small>
+        </button>
         <p className="library-label">Proyectos</p>
         <ul>{tree.roots().map((p) => projectNode(p, 0))}</ul>
       </nav>
@@ -190,8 +217,35 @@ export default function DocumentLibrary({
               A–Z
             </button>
           </div>
+          {canEdit && fromTemplate && <button onClick={fromTemplate}>Desde plantilla</button>}
         </div>
+        {place.kind === "all" && !needle && shown.length > 3 && (
+          <section className="library-continue" aria-label="Seguir leyendo">
+            {[...shown]
+              .sort((a, b) => b.d.updated_at.localeCompare(a.d.updated_at))
+              .slice(0, 3)
+              .map(({ d, text }) => (
+                <button key={d.id} className="library-card" onClick={() => open(d)}>
+                  <strong>{d.title}</strong>
+                  {text.trim() && <span>{excerpt(text)}</span>}
+                  <small>
+                    Editado {short(d.updated_at)}
+                    {author(d) ? ` por ${author(d)}` : ""}
+                  </small>
+                </button>
+              ))}
+          </section>
+        )}
         <section className="library-list" aria-label="Documentos">
+          {shown.length > 0 && (
+            <div className="document-row document-head" aria-hidden="true">
+              <span />
+              <span>Nombre</span>
+              <span>Vinculado a</span>
+              <span>Autor</span>
+              <span>Actualizado</span>
+            </div>
+          )}
           {shown.map(({ d, text }) => (
             <button key={d.id} className="document-row" onClick={() => open(d)}>
               <FileText size={18} />
@@ -199,7 +253,7 @@ export default function DocumentLibrary({
                 <strong>{d.title}</strong>
                 {text.trim() && <small className="document-excerpt">{excerpt(text)}</small>}
               </span>
-              <small className="document-place">{location(d)}</small>
+              <small className="document-place">{linkedTask(d)?.title || location(d)}</small>
               <small className="document-author">{author(d)}</small>
               <small className="document-date">{short(d.updated_at)}</small>
             </button>
@@ -209,7 +263,7 @@ export default function DocumentLibrary({
               {needle ? "Ningún documento coincide." : "Aquí todavía no hay documentos."}
             </p>
           )}
-          {canEdit && place.kind !== "recent" && (
+          {canEdit && !["recent", "shared"].includes(place.kind) && (
             <form
               className="library-add"
               onSubmit={async (e) => {

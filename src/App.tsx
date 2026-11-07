@@ -165,6 +165,8 @@ export default function App() {
     [menu, setMenu] = useState(false),
     [command, setCommand] = useState(false);
   const [capturing, setCapturing] = useState(false);
+  /** Hoy's "Planificar el día" panel. */
+  const [planningDay, setPlanningDay] = useState(false);
   const [pendingState, setPending] = useState<any[]>([]),
     [syncing, setSyncing] = useState(false),
     [online, setOnline] = useState(navigator.onLine),
@@ -1015,6 +1017,29 @@ export default function App() {
     selectedProject?.title ||
     pageTitles[page] ||
     (page === "trash" ? "Papelera" : "Configuración");
+  /** Under a project's title: its description, who leads it and when it is due. */
+  const projectMeta = (() => {
+    if (!selectedProject) return "";
+    const leadId = selectedProject.data.assigneeId || selectedProject.data.ownerId;
+    const lead = members.find((m: any) => m.id === leadId)?.name;
+    const due = selectedProject.data.dueDate || selectedProject.data.endDate;
+    return [
+      selectedProject.data.description?.split("\n")[0].slice(0, 160),
+      lead ? `${lead} lidera` : "",
+      due
+        ? `entrega ${new Intl.DateTimeFormat("es", { day: "numeric", month: "short" }).format(new Date(`${due}T12:00:00`)).replace(".", "")}`
+        : "",
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  })();
+  const projectTabCount = (key: Page) => {
+    if (!selectedProject) return null;
+    const own = (r: Resource) => r.data.projectId === selectedProject.id;
+    if (key === "tasks") return active.filter((r) => r.kind === "task" && own(r) && !["done", "cancelled"].includes(r.data.status)).length;
+    if (key === "documents") return active.filter((r) => r.kind === "document" && own(r) && !r.data.personalNote).length;
+    return null;
+  };
   /** One line under the title with the numbers that matter on this page. */
   const headingMeta = (() => {
     if (!user || selectedProject) return "";
@@ -1333,20 +1358,38 @@ export default function App() {
                   }).format(new Date())}
                 </div>
               )}
-              <h1>{heading}</h1>
-              {selectedProject?.data.description && (
-                <p>{selectedProject.data.description}</p>
-              )}
+              <h1 className={selectedProject ? "project-heading-title" : undefined}>
+                {selectedProject && (
+                  <span
+                    className="project-heading-icon"
+                    style={{ background: selectedProject.data.color || "var(--accent)" }}
+                    aria-hidden="true"
+                  >
+                    <FolderKanban size={20} />
+                  </span>
+                )}
+                {heading}
+              </h1>
+              {selectedProject && projectMeta && <p className="page-meta">{projectMeta}</p>}
               {headingMeta && <p className="page-meta">{headingMeta}</p>}
             </div>
             <div className="heading-actions">
               {selectedProject && (
-                <button
-                  className="icon-button"
-                  aria-label="Editar proyecto"
-                  onClick={() => openResource(selectedProject)}
-                >
-                  <MoreHorizontal size={18} />
+                <>
+                  <button
+                    className="icon-button project-favorite"
+                    aria-label={(preferences.favorites || []).includes(selectedProject.id) ? "Quitar de favoritos" : "Añadir a favoritos"}
+                    aria-pressed={(preferences.favorites || []).includes(selectedProject.id)}
+                    onClick={() => toggleFavorite(selectedProject.id)}
+                  >
+                    <Star size={17} />
+                  </button>
+                  <button onClick={() => openResource(selectedProject)}>Ajustes del proyecto</button>
+                </>
+              )}
+              {page === "overview" && !selectedProject && (
+                <button aria-pressed={planningDay} onClick={() => setPlanningDay((v) => !v)}>
+                  Planificar el día
                 </button>
               )}
               {canEdit &&
@@ -1388,6 +1431,11 @@ export default function App() {
                   onClick={() => navigate(key, selectedProject.id)}
                 >
                   {label}
+                  {projectTabCount(key) !== null && (
+                    <span className="tab-count" aria-hidden="true">
+                      {projectTabCount(key)}
+                    </span>
+                  )}
                 </button>
               ))}
             </nav>
@@ -1500,6 +1548,8 @@ export default function App() {
             <>
               {page === "overview" && (
                 <Today
+                  planning={planningDay}
+                  closePlanning={() => setPlanningDay(false)}
                   resources={resources}
                   projects={projects}
                   user={user}
@@ -1537,6 +1587,7 @@ export default function App() {
                     save={save}
                     refresh={refresh}
                     open={openResource}
+                    activeId={selected?.id || null}
                   />
                 </Suspense>
               )}
@@ -1647,6 +1698,8 @@ export default function App() {
                         projectId={projectId}
                         canEdit={canEdit}
                         open={openResource}
+                        userId={user.id}
+                        fromTemplate={() => navigate("templates")}
                         create={async (title, data) => {
                           await create("document", title, data);
                           notify(`Documento «${title}» creado.`);
@@ -1804,6 +1857,7 @@ export default function App() {
                     resources={active}
                     projectId={projectId}
                     compact={page === "time"}
+                    logTime={canEdit && page !== "time" ? () => navigate("time", projectId) : undefined}
                     goTasks={(filter) => {
                       setTaskPreset(filter);
                       navigate("tasks", projectId);

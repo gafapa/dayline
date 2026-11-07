@@ -63,6 +63,19 @@ try {
   await expect(page.getByText('Nada pendiente. Bien hecho.', { exact: true })).toBeVisible();
   for (const n of bulk) await expect.poll(async () => (await find(n.id)).data.read).toBe(true);
 
+  phase = 'choose a date';
+  const dated = await mutate('task', `Tarea con fecha ${suffix}`, { status: 'todo', assigneeId: me.user.id });
+  const dateNote = await note(`Te han asignado una tarea ${suffix}`, { targetId: dated.id, notificationCategory: 'assignment' });
+  await queue.getByRole('button', { name: /^Por decidir/ }).click();
+  await page.getByRole('group', { name: 'Tipo de aviso' }).getByRole('button', { name: 'Asignaciones', exact: true }).click();
+  await item(dateNote.title).click();
+  await detail.getByRole('button', { name: 'Elegir fecha…', exact: true }).click();
+  const chosen = new Date(Date.now() + 3 * 86400000).toLocaleDateString('en-CA');
+  await detail.getByLabel(`Fecha para ${dated.title}`, { exact: true }).fill(chosen);
+  await expect.poll(async () => (await find(dated.id)).data.dueDate).toBe(chosen);
+  await expect.poll(async () => (await find(dateNote.id)).data.read).toBe(true);
+  await page.getByRole('group', { name: 'Tipo de aviso' }).getByRole('button', { name: 'Todo', exact: true }).click();
+
   phase = 'today shows the planned task';
   await openSection(page, 'Hoy');
   await expect(page.locator('.today-task').filter({ hasText: task.title })).toHaveCount(1);
@@ -79,7 +92,7 @@ try {
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
   await page.screenshot({ path: 'docs/evidence/inbox-390.png' });
   assert.equal(errors.length, 0, errors.join('\n'));
-  await writeFile('docs/evidence/inbox-check.json', JSON.stringify({ verifiedAt: new Date().toISOString(), syntheticData: true, checks: { planForToday: true, snooze: true, archive: true, archiveAll: true, openInPanel: true, todayShowsPlanned: true, mobile: true }, pageErrors: errors }, null, 2));
+  await writeFile('docs/evidence/inbox-check.json', JSON.stringify({ verifiedAt: new Date().toISOString(), syntheticData: true, checks: { planForToday: true, snooze: true, archive: true, archiveAll: true, chooseDate: true, reasonFilter: true, openInPanel: true, todayShowsPlanned: true, mobile: true }, pageErrors: errors }, null, 2));
   console.info('Inbox triage verified: plan for today, snooze, archive, open and Today.');
 } catch (error) {
   console.error('Failed phase:', phase);
