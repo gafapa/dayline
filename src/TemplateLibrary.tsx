@@ -823,6 +823,79 @@ function TemplateBuilder({
   );
 }
 
+/** "Desde plantilla" in Documentos: pick a document template and create it in place. */
+export function DocumentFromTemplate({
+  resources,
+  user,
+  workspace,
+  projectId,
+  refresh,
+  close,
+  done,
+}: {
+  resources: Resource[];
+  user: User;
+  workspace: Workspace;
+  projectId: string | null;
+  refresh: () => Promise<void>;
+  close: () => void;
+  done: (title: string) => void;
+}) {
+  const [chosen, setChosen] = useState<Resource | null>(null);
+  const finish = async () => {
+    await refresh();
+    close();
+    done(chosen?.title || "");
+  };
+  const command = useServerCommand(user.id, workspace.id, "templates", finish);
+  const templates = resources.filter((r) => {
+    if (r.kind !== "template" || r.deleted_at || r.data.archived) return false;
+    const parsed = templateBlueprintSchema.safeParse(r.data.templateBlueprint);
+    return (
+      parsed.success &&
+      parsed.data.nodes.find((n) => n.key === parsed.data.rootKey)?.kind === "document"
+    );
+  });
+  if (chosen)
+    return (
+      <>
+        {command.recovery}
+        <ApplyTemplate
+          resource={chosen}
+          run={command.run}
+          resources={resources}
+          workspace={workspace}
+          projectId={projectId}
+          close={close}
+          done={finish}
+        />
+      </>
+    );
+  return (
+    <Modal title="Nuevo documento desde plantilla" close={close}>
+      <div className="modal-body">
+        {command.recovery}
+        {templates.length ? (
+          <ul className="template-pick" aria-label="Plantillas de documento">
+            {templates.map((t) => (
+              <li key={t.id}>
+                <button onClick={() => setChosen(t)}>
+                  <strong>{t.title}</strong>
+                  {t.data.description && <small>{t.data.description}</small>}
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="muted">
+            Aún no hay plantillas de documento. Crea una en Plantillas o captura un documento existente.
+          </p>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 function ApplyTemplate({
   resource,
   resources,
@@ -830,7 +903,10 @@ function ApplyTemplate({
   close,
   done,
   run,
+  projectId = null,
 }: {
+  /** Preselects this project as the destination. */
+  projectId?: string | null;
   run: (path: string, body: Record<string, any>) => Promise<any>;
   resource: Resource;
   resources: Resource[];
@@ -846,7 +922,7 @@ function ApplyTemplate({
       (r) => r.kind === "project" && !r.deleted_at && !r.data.archived,
     );
   const [visibility, setVisibility] = useState(
-      root.kind === "task" ? "project" : "private",
+      root.kind === "task" || projectId ? "project" : "private",
     ),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
@@ -928,7 +1004,7 @@ function ApplyTemplate({
         </Field>
         {visibility === "project" && (
           <Field label="Proyecto de destino">
-            <select name="project" required disabled={busy}>
+            <select name="project" required disabled={busy} defaultValue={projectId || ""}>
               <option value="">Elige un proyecto</option>
               {projects.map((p) => (
                 <option value={p.id} key={p.id}>

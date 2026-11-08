@@ -363,7 +363,12 @@ export function ResourceDialog({
       title={
         resource.data.personalNote
           ? "Nota personal"
-          : kindLabels[resource.kind as ResourceKind]
+          : [
+              projects.find((p: Resource) => p.id === resource.data.projectId && resource.kind !== "project")?.title,
+              kindLabels[resource.kind as ResourceKind],
+            ]
+              .filter(Boolean)
+              .join(" › ")
       }
       close={requestClose}
       className="resource-dialog"

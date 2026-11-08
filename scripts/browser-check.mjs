@@ -1,5 +1,6 @@
 import { chromium } from '@playwright/test';
 import { openSection } from './navigation-helper.mjs';
+import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 const base=process.env.TEST_URL||'http://127.0.0.1:5173';
 const browser=await chromium.launch({channel:'msedge',headless:true});
@@ -41,7 +42,13 @@ try {
   await page.locator('.resource-dialog').waitFor();await page.locator('.resource-dialog').getByRole('button',{name:'Cerrar',exact:true}).click();
   await page.getByRole('button',{name:projectTitle,exact:false}).first().click();
   await page.getByRole('button',{name:'Nueva tarea',exact:true}).click();dialog=page.getByRole('dialog');await dialog.getByLabel('Título',{exact:true}).fill('Comprobar guardado y sincronización');await dialog.getByLabel('Responsable',{exact:true}).selectOption({label:'Equipo de pruebas'});await dialog.getByRole('button',{name:'Crear tarea',exact:true}).click();
-  await page.locator('.resource-dialog').waitFor();await page.locator('.resource-dialog').getByRole('button',{name:'Cerrar',exact:true}).click();
+  await page.locator('.resource-dialog').waitFor();
+  // The task panel names its project and can widen over the board.
+  assert.equal(await page.locator('.resource-dialog .modal-header h2').textContent(), `${projectTitle} › Tarea`);
+  await page.locator('.resource-dialog').getByRole('button',{name:'Ampliar panel',exact:true}).click();
+  assert.ok(await page.locator('.resource-dialog.expanded').count());
+  await page.locator('.resource-dialog').getByRole('button',{name:'Reducir panel',exact:true}).click();
+  await page.locator('.resource-dialog').getByRole('button',{name:'Cerrar',exact:true}).click();
   await openSection(page, 'Documentos');await page.getByRole('button',{name:'Nuevo documento',exact:true}).click();dialog=page.getByRole('dialog');await dialog.getByLabel('Título',{exact:true}).fill(`Decisiones del equipo ${suffix}`);await dialog.getByRole('button',{name:'Crear documento',exact:true}).click();
   const editor=page.locator('.tiptap');await editor.waitFor();await editor.fill('Una decisión compartida conserva el contexto del proyecto.');
   await page.getByText('Guardado en el servidor',{exact:true}).waitFor({timeout:25000});

@@ -109,6 +109,9 @@ const pageGroup = (page: Page) =>
 const DeliveryWorkspace = lazy(() => import("./DeliveryWorkspace"));
 const ProjectSummary = lazy(() => import("./ProjectSummary"));
 const DocumentLibrary = lazy(() => import("./DocumentLibrary"));
+const DocumentFromTemplate = lazy(() =>
+  import("./TemplateLibrary").then((m) => ({ default: m.DocumentFromTemplate })),
+);
 const WorkOverview = lazy(() => import("./WorkOverview"));
 const Reports = lazy(() => import("./Reports"));
 const TimeTracking = lazy(() => import("./TimeTracking"));
@@ -134,6 +137,7 @@ export default function App() {
   const [page, setPage] = useState<Page>("overview"),
     [projectId, setProjectId] = useState<string | null>(null),
     [selected, setSelected] = useState<Resource | null>(null),
+    [pickingTemplate, setPickingTemplate] = useState(false),
     [creating, setCreating] = useState<ResourceKind | null>(null);
   const [deliveryFocus, setDeliveryFocus] = useState<string | null>(null);
   const [dashboardFocus, setDashboardFocus] = useState<string | null>(null);
@@ -1699,12 +1703,23 @@ export default function App() {
                         canEdit={canEdit}
                         open={openResource}
                         userId={user.id}
-                        fromTemplate={() => navigate("templates")}
+                        fromTemplate={() => setPickingTemplate(true)}
                         create={async (title, data) => {
                           await create("document", title, data);
                           notify(`Documento «${title}» creado.`);
                         }}
                       />
+                      {pickingTemplate && (
+                        <DocumentFromTemplate
+                          resources={resources}
+                          user={user}
+                          workspace={workspace!}
+                          projectId={projectId}
+                          refresh={refresh}
+                          close={() => setPickingTemplate(false)}
+                          done={(title) => notify(`Documento creado desde la plantilla «${title}».`)}
+                        />
+                      )}
                     </Suspense>
                   ) : (
                     <Empty

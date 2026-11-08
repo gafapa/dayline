@@ -996,9 +996,29 @@
 .modal.panel .modal-footer { flex-wrap: wrap; padding: 12px 22px; }
 .modal.panel .detail-tabs { padding: 0 22px; }
 @media (min-width: 1200px) {
-  .app-shell.with-panel .main-column { margin-right: min(520px, 40vw); }
-  .modal.panel { width: min(520px, 40vw); }
+  /* Wide screens: the panel is a card beside the work, not a sheet over it. */
+  .app-shell.with-panel .main-column { margin-right: calc(min(520px, 40vw) + 16px); }
+  .modal.panel {
+    inset: 16px 16px 16px auto;
+    width: min(520px, 40vw);
+    height: auto;
+    max-height: none;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 8px 28px rgba(30, 27, 75, 0.08);
+  }
 }
+.modal-header h2 { min-width: 0; margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.modal.panel.expanded { width: min(1040px, calc(100vw - 32px)); box-shadow: -12px 0 40px rgba(30, 27, 75, 0.18); }
+@media (max-width: 650px) { .modal.panel .panel-expand { display: none; } }
+.template-pick { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.template-pick button {
+  width: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  min-height: 52px; padding: 10px 14px; text-align: left;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--surface);
+}
+.template-pick button:hover { border-color: var(--accent); }
+.template-pick small { color: var(--muted); }
 @media (max-width: 650px) {
   .modal.panel { width: 100vw; box-shadow: none; }
   .modal.panel .form-grid { grid-template-columns: 1fr; }

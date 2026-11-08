@@ -44,10 +44,9 @@ export default function DocumentLibrary({
   const folders = resources.filter((r) => r.kind === "folder");
   const documents = resources.filter((r) => r.kind === "document" && !r.data.personalNote);
   const tree = projectTree(projects, resources);
-  /** Someone else's document that names you as member, follower or reviewer. */
+  /** Someone else's document whose access list names you. */
   const sharedWithMe = (d: Resource) =>
-    d.created_by !== userId &&
-    [...(d.data.members || []), ...(d.data.followers || []), ...(d.data.reviewers || [])].includes(userId);
+    d.created_by !== userId && (d.data.members || []).includes(userId);
   /** The task a document is linked to, either way round. */
   const linkedTask = (d: Resource) =>
     resources.find(

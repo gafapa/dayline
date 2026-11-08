@@ -411,6 +411,37 @@ try {
     .getByRole("status")
     .filter({ hasText: "Plantilla guardada" })
     .waitFor();
+  // "Desde plantilla" in Documentos creates a document without leaving the library.
+  await expect
+    .poll(async () =>
+      (await snapshot()).some(
+        (r) => r.kind === "template" && r.title === `Borrador de colección ${suffix}`,
+      ),
+    )
+    .toBe(true);
+  await nav("Documentos");
+  await page.getByRole("button", { name: "Desde plantilla", exact: true }).click();
+  dialog = page.getByRole("dialog", { name: "Nuevo documento desde plantilla", exact: true });
+  await dialog
+    .getByRole("button", { name: new RegExp(`^Borrador de colección ${suffix}`) })
+    .click();
+  dialog = page.getByRole("dialog");
+  await dialog
+    .getByLabel("Título de la nueva raíz", { exact: true })
+    .fill(`Documento de plantilla ${suffix}`);
+  await dialog
+    .getByRole("button", { name: "Crear desde plantilla", exact: true })
+    .click();
+  await page
+    .getByText(`Documento creado desde la plantilla «Borrador de colección ${suffix}».`, { exact: true })
+    .waitFor();
+  assert.equal(await page.getByRole("heading", { name: "Documentos", exact: true }).count(), 1);
+  assert.ok(
+    (await snapshot()).some(
+      (r) => r.kind === "document" && r.title === `Documento de plantilla ${suffix}`,
+    ),
+  );
+  await nav("Plantillas");
   await controlledByServiceWorker(page);
   await controlledByServiceWorker(page);
   await context.setOffline(true);
