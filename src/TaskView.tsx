@@ -122,7 +122,7 @@ export default function TaskView({
                   <button onClick={() => open(t)}>{t.title}</button>
                 </div>
                 <small className="board-card-meta">
-                  <span>
+                  <span className="board-card-project">
                     {projects.find((p: Resource) => p.id === t.data.projectId)?.title || "Sin proyecto"}
                   </span>
                   {t.data.dueDate && (

@@ -140,6 +140,8 @@ export const resourceDataSchema = z
     url: z.string().url().max(1000).or(z.literal("")).optional(),
     resolved: z.boolean().optional(),
     read: z.boolean().optional(),
+    /** Notification opened in Bandeja but not decided yet ("read" means archived). */
+    seen: z.boolean().optional(),
     /** Why a notification was sent (assignment, mention, reminder…). */
     notificationCategory: z.enum(notificationCategories).optional(),
     /** Notification hidden from the inbox until this instant. */

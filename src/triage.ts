@@ -28,9 +28,13 @@ export function triage(resources: Resource[], user: User, save: (r: Resource) =>
       ? item
       : undefined;
   };
+  /** Opening a notice marks it seen; it stays in the queue until a decision. */
+  const look = (r: Resource) =>
+    r.data.seen || r.data.read ? Promise.resolve() : save({ ...r, data: { ...r.data, seen: true } });
   return {
     target,
     archive,
+    look,
     plannable,
     planToday: async (r: Resource) => {
       const item = plannable(r);

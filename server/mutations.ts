@@ -128,7 +128,7 @@ export async function applyMutation(
     const before = { ...existing?.data },
       after = { ...input.data };
     // Readers may still triage their own notifications: read and snooze.
-    for (const key of ["read", "snoozedUntil"] as const) {
+    for (const key of ["read", "seen", "snoozedUntil"] as const) {
       delete before[key];
       delete after[key];
     }

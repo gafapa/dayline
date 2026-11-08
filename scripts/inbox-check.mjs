@@ -54,14 +54,23 @@ try {
   await expect(page.locator('.resource-dialog .resource-title')).toHaveValue(task.title);
   await page.locator('.resource-dialog').getByRole('button', { name: 'Cerrar', exact: true }).first().click();
 
-  phase = 'archive all';
+  phase = 'archive what was read';
   const bulk = [await note(`Aviso masivo A ${suffix}`), await note(`Aviso masivo B ${suffix}`)];
+  const unseen = await note(`Aviso sin abrir ${suffix}`);
   await queue.getByRole('button', { name: /^Por decidir/ }).click();
-  await expect(queue.getByRole('button', { name: /^Por decidir/ })).toContainText('2');
-  await page.getByRole('button', { name: 'Archivar todo', exact: true }).click();
-  await page.getByRole('button', { name: 'Archivar 2 avisos', exact: true }).click();
-  await expect(page.getByText('Nada pendiente. Bien hecho.', { exact: true })).toBeVisible();
+  await expect(queue.getByRole('button', { name: /^Por decidir/ })).toContainText('3');
+  await expect(page.getByRole('img', { name: 'Sin leer' })).toHaveCount(3);
+  for (const n of bulk) await item(n.title).click();
+  for (const n of bulk) await expect.poll(async () => (await find(n.id)).data.seen).toBe(true);
+  await expect(page.getByRole('img', { name: 'Sin leer' })).toHaveCount(1);
+  await page.getByRole('button', { name: 'Archivar todo lo leído', exact: true }).click();
+  await page.getByRole('button', { name: 'Archivar 2 avisos leídos', exact: true }).click();
   for (const n of bulk) await expect.poll(async () => (await find(n.id)).data.read).toBe(true);
+  await expect(item(unseen.title)).toBeVisible();
+  assert.ok(!(await find(unseen.id)).data.read);
+  await item(unseen.title).click();
+  await detail.getByRole('button', { name: /^Archivar/ }).click();
+  await expect(page.getByText('Nada pendiente. Bien hecho.', { exact: true })).toBeVisible();
 
   phase = 'choose a date';
   const dated = await mutate('task', `Tarea con fecha ${suffix}`, { status: 'todo', assigneeId: me.user.id });

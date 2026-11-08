@@ -74,6 +74,7 @@ export default function Inbox({
   };
   const list = queues[queue].filter((r) => kind === "all" || reasonOf(r) === kind);
   const selected = list.find((r) => r.id === selectedId) || list[0];
+  const seenList = list.filter((r) => r.data.seen && !r.data.read);
   useEffect(() => {
     if (selected && selected.id !== selectedId) setSelectedId(selected.id);
   }, [selected?.id]);
@@ -81,7 +82,9 @@ export default function Inbox({
   const move = (step: number) => {
     if (!list.length) return;
     const index = Math.max(0, list.findIndex((r) => r.id === selected?.id));
-    setSelectedId(list[Math.min(list.length - 1, Math.max(0, index + step))].id);
+    const next = list[Math.min(list.length - 1, Math.max(0, index + step))];
+    setSelectedId(next.id);
+    void t.look(next);
   };
   /** After a decision the next notice is selected, so the queue can be worked through. */
   const decide = async (action: (r: Resource) => Promise<unknown>) => {
@@ -163,7 +166,7 @@ export default function Inbox({
             </button>
           ))}
         </div>
-        {queue !== "earlier" && list.length > 1 && (
+        {queue !== "earlier" && seenList.length > 0 && (
           <div className="triage-bulk push-end">
             {confirmAll ? (
               <>
@@ -171,10 +174,10 @@ export default function Inbox({
                   className="danger"
                   onClick={async () => {
                     setConfirmAll(false);
-                    for (const r of list) await t.archive(r);
+                    for (const r of seenList) await t.archive(r);
                   }}
                 >
-                  Archivar {list.length} avisos
+                  Archivar {seenList.length} {seenList.length === 1 ? "aviso leído" : "avisos leídos"}
                 </button>
                 <button className="text-button" onClick={() => setConfirmAll(false)}>
                   Cancelar
@@ -182,7 +185,7 @@ export default function Inbox({
               </>
             ) : (
               <button className="text-button" onClick={() => setConfirmAll(true)}>
-                Archivar todo
+                Archivar todo lo leído
               </button>
             )}
           </div>
@@ -213,11 +216,15 @@ export default function Inbox({
                   aria-current={r.id === selected?.id ? "true" : undefined}
                   onClick={() => {
                     setSelectedId(r.id);
+                    void t.look(r);
                     // Stacked on a phone: bring the decision into view.
                     if (window.innerWidth < 900)
                       requestAnimationFrame(() => detailRef.current?.scrollIntoView({ block: "start", behavior: "smooth" }));
                   }}
                 >
+                  {!r.data.seen && !r.data.read && (
+                    <span className="triage-unseen" role="img" aria-label="Sin leer" />
+                  )}
                   <span className={`triage-icon kind-${kindOf(r)}`}>
                     <Icon size={15} />
                   </span>

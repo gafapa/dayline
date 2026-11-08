@@ -60,7 +60,8 @@ export default function ProjectSummary({
     .sort((a, b) => a.day.localeCompare(b.day))
     .slice(0, 6);
   const documents = resources
-    .filter((r) => r.kind === "document" && !r.data.personalNote && ids.has(r.data.projectId))
+    // Same set as the Documentos tab: this project's own documents.
+    .filter((r) => r.kind === "document" && !r.data.personalNote && r.data.projectId === project.id)
     .sort((a, b) => b.updated_at.localeCompare(a.updated_at));
   const people = [...new Set(tasks.map((t) => t.data.assigneeId).filter(Boolean))]
     .map((id) => members.find((m) => m.id === id))
