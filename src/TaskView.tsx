@@ -45,6 +45,8 @@ export default function TaskView({
   orderable = false,
   addTask,
   activeId = null,
+  /** Inside a project every card would repeat its name. */
+  showProject = true,
 }: any) {
   /** Done columns show this week's work; the rest stays behind "Ver las N". */
   const [allDone, setAllDone] = useState<Record<string, boolean>>({});
@@ -53,6 +55,14 @@ export default function TaskView({
     column.status !== "done" || allDone[column.value]
       ? column.tasks
       : column.tasks.filter((t: Resource) => Date.parse(t.updated_at) >= weekAgo);
+  const due = (t: Resource) =>
+    t.data.dueDate && (
+      <span
+        className={`board-card-due ${t.data.dueDate < new Date().toLocaleDateString("en-CA") && !["done", "cancelled"].includes(t.data.status) ? "late" : ""}`}
+      >
+        {dateText(t.data.dueDate)}
+      </span>
+    );
   /** Subtasks (child tasks, else checklist items) done out of total. */
   const progress = (t: Resource) => {
     const children = tasks.filter((c: Resource) => c.data.parentId === t.id);
@@ -121,16 +131,14 @@ export default function TaskView({
                   )}
                   <button onClick={() => open(t)}>{t.title}</button>
                 </div>
-                <small className="board-card-meta">
-                  <span className="board-card-project">
-                    {projects.find((p: Resource) => p.id === t.data.projectId)?.title || "Sin proyecto"}
-                  </span>
-                  {t.data.dueDate && (
-                    <span className={t.data.dueDate < new Date().toLocaleDateString("en-CA") && !["done", "cancelled"].includes(t.data.status) ? "late" : ""}>
-                      {dateText(t.data.dueDate)}
+                {showProject && (
+                  <small className="board-card-meta">
+                    <span className="board-card-project">
+                      {projects.find((p: Resource) => p.id === t.data.projectId)?.title || "Sin proyecto"}
                     </span>
-                  )}
-                </small>
+                    {due(t)}
+                  </small>
+                )}
                 {progress(t) && (
                   <span
                     className="board-card-progress"
@@ -155,6 +163,7 @@ export default function TaskView({
                       onChange={(data) => void update({ ...t, data })}
                     />
                   )}
+                  {!showProject && due(t)}
                   <span className="avatar small">
                     {members
                       .find((m: any) => m.id === t.data.assigneeId)

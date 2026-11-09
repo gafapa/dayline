@@ -823,6 +823,7 @@ export default function TaskCollection({
             mode={config.layout}
             open={open}
             activeId={activeId}
+            showProject={!projectId}
             update={save}
             canEdit={canEdit}
             selected={selected}

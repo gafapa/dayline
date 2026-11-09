@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { FileText, Flag, Plus } from "lucide-react";
+import { CheckCircle2, Circle, FileText, Flag, Plus } from "lucide-react";
 import { sprintStats, type Resource } from "../shared/model";
+import { stateLabel } from "../shared/workflow";
 import { projectTree } from "./ProjectList";
 
 const dayText = (day: string) => {
@@ -70,7 +71,6 @@ export default function ProjectSummary({
     .filter((r) => ["task", "document", "milestone"].includes(r.kind) && ids.has(r.data.projectId))
     .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
     .slice(0, 5);
-  const memberName = (id?: string) => members.find((m) => m.id === id)?.name.split(" ")[0] || "—";
   const initials = (name: string) =>
     name
       .split(/\s+/)
@@ -115,8 +115,8 @@ export default function ProjectSummary({
             </>
           ) : (
             <>
-              <strong className="summary-none">—</strong>
-              <button className="summary-link" onClick={() => openTab("planning")}>
+              <strong className="summary-none">Sin hitos</strong>
+              <button className="text-button summary-kpi-link" onClick={() => openTab("planning")}>
                 Planificar en la hoja de ruta
               </button>
             </>
@@ -198,15 +198,27 @@ export default function ProjectSummary({
             </h2>
             {upcoming.length ? (
               <ul>
-                {upcoming.map(({ r, day, milestone }) => (
-                  <li key={r.id} className={`summary-date ${milestone ? "milestone" : ""}`}>
-                    <small className={day < today ? "late" : ""}>{day < today ? "vencida" : dayText(day)}</small>
-                    <button className="summary-link" onClick={() => open(r)}>
-                      {milestone && <Flag size={13} />} {r.title}
-                    </button>
-                    <small>{milestone ? "Hito" : memberName(r.data.assigneeId)}</small>
-                  </li>
-                ))}
+                {upcoming.map(({ r, day, milestone }) => {
+                  const assignee = members.find((m) => m.id === r.data.assigneeId);
+                  return (
+                    <li key={r.id} className={`summary-date ${milestone ? "milestone" : ""} ${day < today ? "late" : ""}`}>
+                      <small className="summary-day">{dayText(day)}</small>
+                      <button className="summary-link" onClick={() => open(r)}>
+                        {milestone && <Flag size={13} />} {r.title}
+                      </button>
+                      <span className={`today-chip ${milestone ? "status-milestone" : `status-${r.data.status}`}`}>
+                        {milestone ? "Hito" : stateLabel(r, projects)}
+                      </span>
+                      {assignee ? (
+                        <span className="avatar small" title={assignee.name}>
+                          {initials(assignee.name)}
+                        </span>
+                      ) : (
+                        <span className="avatar small summary-nobody" title="Sin responsable">—</span>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
               <p className="muted summary-empty">Nada con fecha. Pon fechas a las tareas para verlas aquí.</p>
@@ -241,13 +253,15 @@ export default function ProjectSummary({
           <section className="summary-card" aria-label="Personas del proyecto">
             <h2>Personas · {people.length}</h2>
             {people.length ? (
-              <div className="summary-people">
+              <ul>
                 {people.map((m) => (
-                  <span key={m.id} className="avatar small" title={m.name}>
-                    {initials(m.name)}
-                  </span>
+                  <li key={m.id} className="summary-person">
+                    <span className="avatar small">{initials(m.name)}</span>
+                    <span className="summary-person-name">{m.name}</span>
+                    <small>{open_.filter((t) => t.data.assigneeId === m.id).length} abiertas</small>
+                  </li>
                 ))}
-              </div>
+              </ul>
             ) : (
               <p className="muted summary-empty">Nadie tiene tareas asignadas aquí.</p>
             )}
@@ -257,6 +271,15 @@ export default function ProjectSummary({
             <ul>
               {activity.map((r) => (
                 <li key={r.id} className="summary-activity">
+                  {r.kind === "document" ? (
+                    <FileText size={15} className="summary-kind doc" />
+                  ) : r.kind === "milestone" ? (
+                    <Flag size={15} className="summary-kind milestone" />
+                  ) : r.data.status === "done" ? (
+                    <CheckCircle2 size={15} className="summary-kind done" />
+                  ) : (
+                    <Circle size={15} className="summary-kind" />
+                  )}
                   <button className="summary-link" onClick={() => open(r)}>
                     {r.title}
                   </button>
