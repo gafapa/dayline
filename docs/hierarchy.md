@@ -1,6 +1,6 @@
 # Project structure
 
-The Projects screen provides cards and a structure view. Folders, projects, subprojects and documents form a workspace-scoped hierarchy. The current location has breadcrumbs, visible child counts, search, creation, details, archive controls and access to project tasks. Mobile location navigation folds into a native disclosure. Existing project cards remain available and the chosen view is a user preference.
+The Projects screen has one view: a list of projects with subprojects nested (folders in between are skipped), progress, overdue counts and in-place creation. Drag a project by its grip to reorder it among its siblings (the gap between two rows; the order is stored as `order` and projects without one follow by name), onto another project to nest it, or onto the list header to take it to the top level. Nesting and un-nesting go through the reviewed move below. Folders, projects, subprojects and documents still form a workspace-scoped hierarchy; folders are browsed in Documentos, and any project, folder or document can be moved from its details ("Organizar ubicación").
 
 Folders inherit their location's permissions. A project can be nested under another project or folder; its descendants must satisfy the permissions of every enclosing project. Personal document ownership remains restrictive even for administrators. Deleting a folder hides live descendants; restoring it makes the same authorized descendants available again. Archiving a location is distinct from deletion and does not rewrite descendant archive flags.
 
@@ -8,7 +8,7 @@ Folders inherit their location's permissions. A project can be nested under anot
 
 Creation uses the persistent user-scoped outbox, including offline creation under cached or pending parents. Creation forms retain device-local drafts. Folder and project parent types are validated on the server, and document project scope must agree with its parent location. Parent chains are bounded at 128 levels and cycles are rejected.
 
-Directory URLs use `?view=projects&workspace=<uuid>&location=<uuid>`. A copied folder resource link also opens its directory across authorized workspaces. Opening a document retains its directory as browser-history context; closing or reloading returns to the appropriate location. The structure module is included in the application-shell precache so offline reload does not depend on a module having been downloaded after service-worker activation.
+A copied folder resource link opens the folder's details over Documentos.
 
 ## Reviewed moves
 
@@ -24,6 +24,6 @@ Project template capture includes nested folders and preserves their parent rela
 
 `tests/hierarchy.test.ts` covers atomic scope changes, canonical Yjs preservation, cycles, typed locations, inherited privacy, stale previews, concurrent moves, replay, inaccessible descendants, late rollback, folder-aware templates, trash restoration and deletion timestamp preservation. `tests/navigation.test.ts` adds directory URL validation.
 
-`scripts/hierarchy-check.mjs` uses synthetic local accounts to create folders/projects/documents, edit a document, interrupt a successful move response, reload/retry without duplicate versions, navigate and create offline, archive/restore and reopen folder permalinks. Design probes cover 1440, 768 and 390px. The exact-image PostgreSQL staging check additionally verifies concurrent command replay, folder-aware template copying, inherited project privacy and trashed timestamps.
+`scripts/hierarchy-check.mjs` uses synthetic local accounts: it checks the list is the only view, edits a document, moves its folder from the details with an interrupted response and a retry without duplicate versions, checks a move cannot be reviewed offline, and creates projects and subprojects in place at 1440 and 390px. `scripts/dnd-check.mjs` reorders and nests projects by dragging. The exact-image PostgreSQL staging check additionally verifies concurrent command replay, folder-aware template copying, inherited project privacy and trashed timestamps.
 
 A folder move can change who can read its current contents; the confirmation states this before applying it. Downloaded content is not remotely erased. Complete historical/export acceptance, multiple dirty tabs, shared-device cleanup, large-workspace pagination and native device acceptance remain tracked separately. Older releases do not implement the same folder UI and inherited permission checks; assess compatibility before rolling back after hierarchy adoption.

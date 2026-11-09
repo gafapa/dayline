@@ -932,20 +932,16 @@
 .board-task.draggable { cursor: grab; touch-action: manipulation; }
 .board-task.draggable:active { cursor: grabbing; }
 .board-column.drop-armed { outline: 2px dashed color-mix(in srgb, var(--accent) 35%, transparent); outline-offset: -2px; border-radius: 12px; }
-.board-column.drop-over, .calendar-day.drop-over, .calendar-undated.drop-over, .sprint-backlog.drop-over, .sprint-plan-end.drop-over, .attachments.drop-over, .structure-item.drop-over { background: color-mix(in srgb, var(--accent) 10%, var(--surface)); outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 12px; }
+.board-column.drop-over, .calendar-day.drop-over, .calendar-undated.drop-over, .sprint-backlog.drop-over, .sprint-plan-end.drop-over, .attachments.drop-over { background: color-mix(in srgb, var(--accent) 10%, var(--surface)); outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 12px; }
 .drop-before { box-shadow: inset 0 3px 0 var(--accent); }
 .board-task.drop-before { box-shadow: 0 -3px 0 var(--accent); }
-.task-row, .structure-item, .sprint-plan-task { position: relative; }
+.task-row, .sprint-plan-task { position: relative; }
 .drag-grip { position: absolute; left: -26px; top: 50%; transform: translateY(-50%); width: 24px; min-width: 24px; height: 32px; min-height: 32px; padding: 0; border: 0; border-radius: 6px; background: none; color: var(--muted); opacity: 0.45; cursor: grab; touch-action: none; display: inline-flex; align-items: center; justify-content: center; }
-.structure-item > .drag-grip { top: 38px; }
-.task-row:hover > .drag-grip, .structure-item:hover > .drag-grip, .sprint-plan-task:hover > .drag-grip, .drag-grip:focus-visible { opacity: 1; color: var(--accent); background: var(--active); }
+.task-row:hover > .drag-grip, .sprint-plan-task:hover > .drag-grip, .drag-grip:focus-visible { opacity: 1; color: var(--accent); background: var(--active); }
 .sprint-plan-task > div:not(.sprint-task-controls) { min-width: 0; flex: 1; }
 .sidebar .nav-item.drop-armed { outline: 1px dashed rgba(255, 255, 255, 0.35); outline-offset: -1px; }
 .sidebar .nav-item.drop-over { background: var(--accent); color: #fff; outline: 0; }
 .drop-zone { display: inline-flex; border-radius: 8px; }
-.drop-zone.drop-armed { outline: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent); }
-.drop-zone.drop-over { outline: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
-.structure-navigation .drop-zone { display: flex; flex: 1; min-width: 0; }
 .calendar-day button { cursor: grab; touch-action: manipulation; }
 .calendar-undated { margin-top: 16px; padding: 14px 16px; border: 1px dashed var(--control); border-radius: 12px; }
 .calendar-undated h3 { margin: 0 0 4px; font-size: 14px; }
@@ -1213,19 +1209,6 @@
 .sidebar .nav-subproject .project-dot { width: 6px; height: 6px; opacity: 0.8; }
 .sidebar .nav-all-projects { margin-bottom: 2px; }
 
-/* Structure view: tree aligned left, lighter row actions. */
-.structure-tree-row > .drop-zone { display: flex; flex: 1; min-width: 0; }
-.structure-location, .structure-root { justify-content: flex-start; border-radius: 8px; }
-.structure-root { font-weight: 700; }
-.structure-tree-row .icon-button, .structure-tree-spacer { width: 32px; min-width: 32px; min-height: 36px; }
-.structure-location { min-height: 36px; padding: 6px 8px; }
-.structure-item { padding: 10px 0; }
-.structure-row-actions { gap: 4px; margin: 2px 0 0 28px; }
-.structure-row-actions button { min-height: 32px; padding: 4px 10px; font-size: 13px; border-color: transparent; background: none; color: var(--muted); }
-.structure-row-actions button:hover { background: var(--active); color: var(--text); }
-@media (pointer: coarse) {
-  .structure-tree-row .icon-button, .structure-tree-spacer, .structure-location, .structure-row-actions button, .project-child { min-height: 44px; }
-}
 .sidebar .nav-item.nav-subproject { min-height: 34px; padding-block: 4px; }
 
 /* 0.21 navigation and page pattern (NN/g vertical nav, Linear density, Atlassian page header):
@@ -1265,7 +1248,7 @@
 .project-list { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
 .project-list ul { list-style: none; margin: 0; padding: 0; }
 .project-list-head, .project-row { display: grid; grid-template-columns: 24px 10px minmax(0, 1fr) 180px 90px auto; align-items: center; gap: 10px; }
-.project-list-head { padding: 8px 12px 8px 42px; grid-template-columns: minmax(0, 1fr) 180px 90px 150px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); background: var(--active); }
+.project-list-head { padding: 8px 12px 8px 60px; grid-template-columns: minmax(0, 1fr) 180px 90px 150px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); background: var(--active); }
 .project-row { min-height: 44px; padding-right: 8px; border-top: 1px solid var(--border); }
 .project-list > ul > li:first-child > .project-row { border-top: 0; }
 .project-row:hover { background: color-mix(in srgb, var(--accent) 5%, var(--surface)); }
@@ -1284,7 +1267,7 @@ button.project-row-toggle:hover { background: var(--active); }
 .project-row-actions .icon-button { width: 30px; height: 30px; min-height: 30px; color: var(--muted); opacity: 0.55; }
 .project-row:hover .project-row-actions .icon-button, .project-row-actions .icon-button:focus-visible, .project-row-actions .icon-button[aria-pressed="true"] { opacity: 1; }
 .project-row-actions .icon-button[aria-pressed="true"] { color: var(--amber); }
-.project-row-add { width: 100%; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px 0 42px; border: 0; border-top: 1px solid var(--border); border-radius: 0; background: none; color: var(--muted); font-weight: 600; justify-content: flex-start; }
+.project-row-add { width: 100%; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px 0 60px; border: 0; border-top: 1px solid var(--border); border-radius: 0; background: none; color: var(--muted); font-weight: 600; justify-content: flex-start; }
 .project-row-add:hover { color: var(--accent); background: color-mix(in srgb, var(--accent) 5%, var(--surface)); }
 .project-row-new { grid-template-columns: 24px 16px minmax(0, 1fr) auto auto; padding-block: 6px; background: color-mix(in srgb, var(--accent) 4%, var(--surface)); }
 .project-row-new input { min-height: 34px; }
@@ -1303,7 +1286,7 @@ button.project-row-toggle:hover { background: var(--active); }
 }
 @media (pointer: coarse) { .project-row-actions .icon-button, .project-row-toggle { width: 40px; height: 40px; min-height: 40px; } }
 .project-list-head { grid-template-columns: 24px 10px minmax(0, 1fr) 180px 90px 150px; padding: 8px 8px 8px 8px; }
-.project-list-head-name { grid-column: 1 / 4; padding-left: 44px; }
+.project-list-head-name { grid-column: 1 / 4; padding-left: 62px; }
 @media (max-width: 760px) {
   .project-favorites { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 4px; }
   .project-favorite { flex: 0 0 72%; scroll-snap-align: start; }
@@ -1646,3 +1629,16 @@ button.library-toggle:hover { background: var(--active); }
 @media (max-width: 650px) { .summary-date { grid-template-columns: 64px minmax(0, 1fr) 24px; } .summary-date .today-chip { display: none; } }
 .board-task > div:last-child .board-card-due { margin-left: auto; font-size: 12px; color: var(--muted); white-space: nowrap; }
 .board-task > div:last-child .board-card-due.late { color: var(--negative, #b23a17); font-weight: 600; }
+
+/* Projects list: drag a row by its grip to reorder (the gaps) or to nest it (another row). */
+.project-row { position: relative; }
+.project-row > .project-row-grip { left: 2px; top: 50%; }
+.project-row:hover > .project-row-grip { opacity: 1; color: var(--accent); background: var(--active); }
+.project-row.dragging { opacity: 0.45; }
+.project-row.drop-over { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); box-shadow: inset 0 0 0 2px var(--accent); }
+.project-gap { height: 0; list-style: none; }
+.project-gap.drop-armed { height: 10px; }
+.project-gap.drop-over { height: 10px; background: linear-gradient(var(--accent), var(--accent)) center / 100% 3px no-repeat; }
+.project-list-head.drop-armed { display: flex; min-height: 40px; align-items: center; color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--surface)); outline: 2px dashed color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: -4px; }
+.project-list-head.drop-over { background: color-mix(in srgb, var(--accent) 16%, var(--surface)); }
+@media (hover: none) { .project-row > .project-row-grip { opacity: 0.7; } }

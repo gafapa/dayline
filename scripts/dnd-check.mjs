@@ -118,20 +118,24 @@ try {
   await page.screenshot({ path: 'docs/evidence/dnd-sprint-1440.png' });
 
   await page.setViewportSize({ width: 1440, height: 1000 });
-  phase = 'structure: drop a document on a folder';
-  // Team documents always live in a project: put both inside Alfa and open its structure.
-  const folder = await mutate('folder', `Carpeta ${suffix}`, { parentId: alpha.id, projectId: alpha.id });
-  const doc = await mutate('document', `Documento ${suffix}`, { parentId: alpha.id, projectId: alpha.id });
+  phase = 'projects: reorder and nest by dragging';
   await openSection(page, 'Proyectos');
-  await page.getByRole('button', { name: 'Estructura', exact: true }).click();
-  const item = (r) => page.locator('.structure-item').filter({ hasText: r.title });
-  await item(alpha).getByRole('button', { name: 'Contenido', exact: true }).click();
-  await item(doc).waitFor();
-  await drag(item(doc).getByRole('button', { name: `Arrastrar ${doc.title}`, exact: true }), item(folder));
-  const dialog = page.getByRole('dialog', { name: `Mover ${doc.title}` });
-  await expect(dialog.getByRole('status')).toContainText(folder.title);
+  const list = page.getByRole('region', { name: 'Todos los proyectos' });
+  const projectRow = (r) => list.locator('.project-row').filter({ has: page.getByRole('button', { name: r.title, exact: true }) });
+  const grip = (r) => projectRow(r).getByRole('button', { name: `Arrastrar ${r.title}`, exact: true });
+  await projectRow(beta).waitFor();
+  // Beta sorts after Alfa by name; drop it on the gap before Alfa.
+  await drag(grip(beta), list.locator('.project-gap').first());
+  await expect.poll(async () => { const a = await find(ws, alpha.id), b = await find(ws, beta.id); return typeof b.data.order === 'number' && typeof a.data.order === 'number' && b.data.order < a.data.order; }).toBe(true);
+  await expect(list.locator('.project-row-name').first()).toContainText(beta.title);
+  // Dropping Beta on Alfa nests it after the reviewed move.
+  await drag(grip(beta), projectRow(alpha));
+  const dialog = page.getByRole('dialog', { name: `Mover ${beta.title}` });
+  await expect(dialog.getByRole('status')).toContainText(alpha.title);
   await dialog.getByRole('button', { name: 'Confirmar movimiento', exact: true }).click();
-  await expect.poll(async () => (await find(ws, doc.id)).data.parentId).toBe(folder.id);
+  await expect.poll(async () => (await find(ws, beta.id)).data.parentId).toBe(alpha.id);
+  await expect(dialog).toHaveCount(0);
+  await page.screenshot({ path: 'docs/evidence/dnd-projects-1440.png' });
 
   phase = 'attachments: drop files';
   await page.goto(`${base}/?resource=${t2.id}&workspace=${ws}`, { waitUntil: 'domcontentloaded' });
@@ -145,6 +149,7 @@ try {
   await expect(zone).toContainText('nota-arrastrada.txt');
 
   phase = 'document: move a block with its handle';
+  const doc = await mutate('document', `Documento ${suffix}`, { parentId: alpha.id, projectId: alpha.id });
   await page.goto(`${base}/?resource=${doc.id}&workspace=${ws}`, { waitUntil: 'domcontentloaded' });
   const editor = page.locator('.ProseMirror[contenteditable="true"]');
   await editor.waitFor();
@@ -192,8 +197,8 @@ try {
   await page.getByRole('region', { name: 'Necesita atención' }).getByRole('button', { name: /sin responsable/ }).click();
   await expect(page.getByLabel('Buscar tareas', { exact: true })).toHaveValue('@nadie');
 
-  await writeFile('docs/evidence/dnd-check.json', JSON.stringify({ verifiedAt: new Date().toISOString(), syntheticData: true, checks: { boardDefault: true, boardColumnMove: true, boardReorder: true, sidebarProjectDrop: true, favoritesReorder: true, listReorder: true, calendarDate: true, calendarUndate: true, sprintPlanDrag: true, structureMoveReview: true, attachmentFileDrop: true, typedFilter: true, documentBlockMove: true, documentImageDrop: true }, pageErrors: errors }, null, 2));
-  console.info('Drag and drop verified on the board, list, sidebar, calendar, sprint plan, structure, attachments and documents.');
+  await writeFile('docs/evidence/dnd-check.json', JSON.stringify({ verifiedAt: new Date().toISOString(), syntheticData: true, checks: { boardDefault: true, boardColumnMove: true, boardReorder: true, sidebarProjectDrop: true, favoritesReorder: true, listReorder: true, calendarDate: true, calendarUndate: true, sprintPlanDrag: true, projectReorder: true, projectNestReview: true, attachmentFileDrop: true, typedFilter: true, documentBlockMove: true, documentImageDrop: true }, pageErrors: errors }, null, 2));
+  console.info('Drag and drop verified on the board, list, sidebar, calendar, sprint plan, projects, attachments and documents.');
 } catch (error) {
   console.error('Failed phase:', phase);
   await page.screenshot({ path: '.local/dnd-failure.png', fullPage: true }).catch(() => {});

@@ -210,7 +210,7 @@ export function ResourceDialog({
   error,
   notify,
   navigationGuard,
-  showStructure,
+  moveResource,
   requestReminder,
 }: any) {
   const [draft, setDraft] = useState<Resource>(resource),
@@ -550,10 +550,10 @@ export function ResourceDialog({
                   </select>
                 </Field>
               )}
-              {isStructure(resource) && showStructure && (
+              {isStructure(resource) && moveResource && (
                 <div className="field">
-                  <span>Ubicación en la estructura</span>
-                  <button type="button" onClick={() => showStructure(resource)}>
+                  <span>Ubicación</span>
+                  <button type="button" onClick={() => moveResource(resource)}>
                     Organizar ubicación
                   </button>
                   <small>

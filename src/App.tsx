@@ -2,7 +2,6 @@ import { authorizeLocalUser } from "./local-lifecycle";
 import { DragProvider, useDrag, useDrop } from "./dnd";
 import { useLocalGuard } from "./useLocalGuard";
 import { coordinateLocalSession, signOutEverywhereLocal, LocalWorkRetained } from "./session-coordination";
-import { isStructure, structureParent } from "../shared/hierarchy";
 import { applyFieldDefaults, fieldDefaults, fieldValueError } from "../shared/custom-fields";
 import { resolveNavigation } from "./resolve-navigation";
 import { navigationEvent, localResourceLocation } from "./navigation";
@@ -16,7 +15,7 @@ import { cacheSnapshot, beginSnapshotRead, flushOutbox, localSnapshot, pendingOp
 import { ProjectList } from "./ProjectList";
 import { kindLabels, type Resource, type ResourceKind, type User, type Workspace } from "../shared/model";
 const CollaborativeEditor = lazy(() => import("./CollaborativeEditor"));
-const ProjectStructure = lazy(() => import("./ProjectStructure"));
+const MoveResource = lazy(() => import("./MoveResource"));
 const CustomFieldAdmin = lazy(() => import("./CustomFieldAdmin"));
 const WorkflowAdmin = lazy(() => import("./WorkflowAdmin"));
 const WorkspaceManager = lazy(() => import("./WorkspaceManager"));
@@ -156,10 +155,8 @@ export default function App() {
     setTimeFocusState(id);
     setTimeCreationRequested(false);
   };
-  const [projectLayout, setProjectLayout] = useState<"cards" | "structure">(
-    "cards",
-  );
-  const [hierarchyFocusId, setHierarchyFocusId] = useState<string | null>(null);
+  /** A project, folder or document being moved; `destinationId` is set when it was dropped. */
+  const [moving, setMoving] = useState<{ resource: Resource; destinationId?: string | null } | null>(null);
   const [configuringWorkflow, setConfiguringWorkflow] =
     useState<Resource | null>(null);
   const [configuringFields, setConfiguringFields] = useState<Resource | null>(
@@ -403,11 +400,6 @@ export default function App() {
       setUser(session.user);
       setWorkspaces(session.workspaces);
       setPreferences(session.preferences);
-      setProjectLayout(
-        session.preferences?.projectLayout === "structure"
-          ? "structure"
-          : "cards",
-      );
       setWorkspaceId((current) =>
         session.workspaces.some((w: Workspace) => w.id === current)
           ? current
@@ -456,7 +448,6 @@ export default function App() {
     setTimeFocus(null);
     resetReminders();
     setProjectId(null);
-    setHierarchyFocusId(null);
     setConfiguringFields(null);
     setConfiguringWorkflow(null);
     setLoading(true);
@@ -644,7 +635,6 @@ export default function App() {
     resetReminders();
     setPage(next);
     setProjectId(id);
-    if (next === "projects") setHierarchyFocusId(id);
     setQuery("");
     setMenu(false);
   };
@@ -680,9 +670,7 @@ export default function App() {
       resource.id,
       page,
       projectId || undefined,
-      page === "projects" && projectLayout === "structure"
-        ? hierarchyFocusId || undefined
-        : undefined,
+      undefined,
       page === "reports" ? dashboardFocus || undefined : undefined,
     );
     if (resource.kind === "reminder") {
@@ -881,7 +869,6 @@ export default function App() {
         setMenu(false);
         // The palette stays open: it closes itself when an entry is chosen.
         setProjectId(null);
-        setHierarchyFocusId(null);
         setQuery("");
         setNavigationError("");
         setOnline(!result.offline);
@@ -908,7 +895,9 @@ export default function App() {
                   ? "tasks"
                   : target.kind === "document"
                     ? "documents"
-                    : target.kind === "project" || target.kind === "folder"
+                    : target.kind === "folder"
+                      ? "documents"
+                      : target.kind === "project"
                       ? "projects"
                       : target.kind === "sprint"
                         ? "sprints"
@@ -923,19 +912,6 @@ export default function App() {
             isDelivery(target) ? "planning" : route.backdrop?.page || inferred,
           );
           if (
-            route.backdrop?.page === "projects" &&
-            route.backdrop.containerId &&
-            result.snapshot.resources.some(
-              (r) =>
-                r.id === route.backdrop!.containerId &&
-                isStructure(r) &&
-                !r.deleted_at,
-            )
-          ) {
-            setProjectLayout("structure");
-            setHierarchyFocusId(route.backdrop.containerId);
-          }
-          if (
             route.backdrop?.projectId &&
             result.snapshot.resources.some(
               (r) =>
@@ -945,11 +921,7 @@ export default function App() {
             )
           )
             setProjectId(route.backdrop.projectId);
-          if (target.kind === "folder") {
-            setPage("projects");
-            setProjectLayout("structure");
-            setHierarchyFocusId(target.id);
-          } else if (target.kind === "reminder") {
+          if (target.kind === "reminder") {
             setPage("reminders");
             setReminderFocus(target.id);
           } else if (target.kind === "time_entry") {
@@ -962,21 +934,6 @@ export default function App() {
           else setSelected(target);
         } else if (route.type === "page") {
           setPage(route.page);
-          if (
-            route.page === "projects" &&
-            route.containerId &&
-            result.snapshot.resources.some(
-              (r) =>
-                r.id === route.containerId && isStructure(r) && !r.deleted_at,
-            )
-          ) {
-            setProjectLayout("structure");
-            setHierarchyFocusId(route.containerId);
-          }
-          if (route.page === "projects" && route.projectId) {
-            setProjectLayout("structure");
-            setHierarchyFocusId(route.projectId);
-          }
           if (
             route.projectId &&
             result.snapshot.resources.some(
@@ -1406,7 +1363,7 @@ export default function App() {
                   "my_tasks",
                   "summary",
                 ].includes(page) &&
-                (page !== "projects" || projectLayout === "cards") && (
+                (
                   <button
                     className="primary"
                     onClick={() => (page === "overview" ? setCapturing(true) : setCreating(defaultKind))}
@@ -1598,66 +1555,11 @@ export default function App() {
               {page === "projects" && (
                 <>
                   <div className="page-toolbar">
-                    {projectLayout !== "structure" && <SearchField value={query} set={setQuery} />}
-                    <div
-                      className="segmented push-end"
-                      role="group"
-                      aria-label="Vista de proyectos"
-                    >
-                      <button
-                        aria-pressed={projectLayout !== "structure"}
-                        onClick={() => {
-                          setProjectLayout("cards");
-                          void updatePreference({ projectLayout: "cards" });
-                        }}
-                      >
-                        Lista
-                      </button>
-                      <button
-                        aria-pressed={projectLayout === "structure"}
-                        onClick={() => {
-                          setProjectLayout("structure");
-                          void updatePreference({ projectLayout: "structure" });
-                        }}
-                      >
-                        Estructura
-                      </button>
-                    </div>
+                    <SearchField value={query} set={setQuery} />
                   </div>
-                  {projectLayout === "structure" && user && workspace ? (
-                    <Suspense
-                      fallback={<p role="status">Abriendo la estructura…</p>}
-                    >
-                      <ProjectStructure
-                        key={scopeKey}
-                        resources={resources}
-                        workspace={workspace}
-                        user={user}
-                        canEdit={canEdit}
-                        focusId={hierarchyFocusId}
-                        setFocus={(id) => {
-                          setHierarchyFocusId(id);
-                          setProjectId(null);
-                          writePageLocation(
-                            "projects",
-                            workspaceId,
-                            undefined,
-                            false,
-                            id || undefined,
-                          );
-                        }}
-                        open={openResource}
-                        openTasks={(id) => navigate("tasks", id)}
-                        configureFields={setConfiguringFields}
-                        configureWorkflow={setConfiguringWorkflow}
-                        create={create}
+                  <ProjectList
                         save={save}
-                        refresh={refresh}
-                      />
-                    </Suspense>
-                  ) : (
-                    <>
-                      <ProjectList
+                        move={(resource, destinationId) => setMoving({ resource, destinationId })}
                         projects={projects}
                         resources={active}
                         tasks={tasks}
@@ -1687,8 +1589,6 @@ export default function App() {
                           onAction={() => setCreating("project")}
                         />
                       )}
-                    </>
-                  )}
                 </>
               )}
               {page === "documents" && (
@@ -2132,9 +2032,6 @@ export default function App() {
                   workspaceId,
                   projectId || undefined,
                   true,
-                  page === "projects" && projectLayout === "structure"
-                    ? hierarchyFocusId || undefined
-                    : undefined,
                 );
             }}
             save={save}
@@ -2142,27 +2039,24 @@ export default function App() {
             open={openResource}
             error={setError}
             notify={notify}
-            showStructure={(resource: Resource) => {
-              if (!navigationGuard.current()) return;
-              const containerId =
-                resource.kind === "document"
-                  ? structureParent(resource)
-                  : resource.id;
-              setSelected(null);
-              setPage("projects");
-              setProjectLayout("structure");
-              setHierarchyFocusId(containerId);
-              setProjectId(null);
-              writePageLocation(
-                "projects",
-                workspaceId,
-                undefined,
-                false,
-                containerId || undefined,
-              );
-            }}
+            moveResource={(resource: Resource) => setMoving({ resource })}
           />
         )}
+      {moving && user && workspace && canEdit && (
+        <Suspense fallback={<p role="status">Abriendo…</p>}>
+          <MoveResource
+            key={moving.resource.id}
+            resource={moving.resource}
+            initialDestination={moving.destinationId}
+            resources={resources}
+            workspace={workspace}
+            user={user}
+            refresh={refresh}
+            close={() => setMoving(null)}
+            done={notify}
+          />
+        </Suspense>
+      )}
       {configuringFields &&
         user &&
         workspace &&
@@ -2232,11 +2126,7 @@ export default function App() {
             workspace={workspace}
             resources={resources}
             members={members}
-            initialDestination={
-              page === "projects" && projectLayout === "structure"
-                ? hierarchyFocusId || projectId
-                : projectId
-            }
+            initialDestination={projectId}
             save={save}
             open={openResource}
             close={() => setCapturing(false)}

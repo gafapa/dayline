@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   ChevronDown,
   ChevronRight,
+  GripVertical,
   Info,
   Plus,
   SlidersHorizontal,
@@ -9,11 +10,15 @@ import {
   Workflow,
 } from "lucide-react";
 import { sprintStats, type Resource } from "../shared/model";
+import { structureBranch, structureParent } from "../shared/hierarchy";
+import { placeInOrder, useDrag, useDrop, type DragItem } from "./dnd";
 
 /**
  * The projects page. Favorites sit on top as cards; below, every project as a compact tree
  * (subprojects nested, progress counted over the whole branch). New projects and subprojects
  * are created in place. A search shows matches flat, each with its path.
+ * Drag a project by its grip: onto another project to nest it (a reviewed move), onto the
+ * gap between two siblings to reorder, or onto the header to take it back to the top level.
  */
 export function ProjectList({
   projects,
@@ -29,7 +34,11 @@ export function ProjectList({
   configureFields,
   configureWorkflow,
   createProject,
+  save,
+  move,
 }: {
+  save: (project: Resource) => Promise<unknown>;
+  move: (project: Resource, destinationId: string | null) => void;
   projects: Resource[];
   resources: Resource[];
   tasks: Resource[];
@@ -65,6 +74,31 @@ export function ProjectList({
     return names.join(" › ");
   };
   const needle = query.trim().toLowerCase();
+  const dragged = (item: DragItem) =>
+    canEdit && item.type === "structure" && item.resource.kind === "project" ? item.resource : null;
+  const siblings = (parentId: string | null) => (parentId ? tree.childrenOf(parentId) : tree.roots());
+  /** Gap before `beforeId` (or at the end) among the children of `parentId`. */
+  const gap = (parentId: string | null, beforeId: string | null, depth: number) => (
+    <ProjectGap
+      key={`gap:${parentId}:${beforeId}`}
+      id={`project-gap:${parentId}:${beforeId}`}
+      depth={depth}
+      accepts={(item) => {
+        const p = dragged(item);
+        return !!p && p.id !== beforeId && (tree.parentOf(p.id)?.id || null) === parentId;
+      }}
+      drop={async (item) => {
+        const p = dragged(item);
+        if (!p) return;
+        const list = siblings(parentId);
+        const changes = placeInOrder(list, p, beforeId);
+        for (const r of list) {
+          const order = changes.get(r.id);
+          if (order !== undefined) await save({ ...r, data: { ...r.data, order } });
+        }
+      }}
+    />
+  );
   const pinned = favorites
     .map((id) => projects.find((p) => p.id === id))
     .filter(Boolean) as Resource[];
@@ -76,7 +110,24 @@ export function ProjectList({
     const favorite = favorites.includes(project.id);
     return (
       <li key={project.id}>
-        <div className="project-row" style={{ paddingInlineStart: 8 + depth * 22 }}>
+        <ProjectRow
+          project={project}
+          depth={depth}
+          canDrag={canEdit && !needle}
+          accepts={(item) => {
+            const p = dragged(item);
+            return (
+              !!p &&
+              p.id !== project.id &&
+              structureParent(p) !== project.id &&
+              !structureBranch(p.id, resources).some((r) => r.id === project.id)
+            );
+          }}
+          drop={(item) => {
+            const p = dragged(item);
+            if (p) move(p, project.id);
+          }}
+        >
           {children.length ? (
             <button
               className="project-row-toggle"
@@ -160,10 +211,11 @@ export function ProjectList({
               </>
             )}
           </span>
-        </div>
+        </ProjectRow>
         {(open && children.length > 0) || adding === project.id ? (
           <ul>
-            {open && children.map((child) => row(child, depth + 1))}
+            {open && children.flatMap((child) => [gap(project.id, child.id, depth + 1), row(child, depth + 1)])}
+            {open && children.length > 0 && gap(project.id, null, depth + 1)}
             {adding === project.id && (
               <NewProjectRow
                 depth={depth + 1}
@@ -203,14 +255,21 @@ export function ProjectList({
         </section>
       )}
       <section aria-label="Todos los proyectos" className="project-list">
-        <div className="project-list-head" aria-hidden="true">
-          <span className="project-list-head-name">Proyecto</span>
-          <span>Progreso</span>
-          <span>Vencidas</span>
-          <span />
-        </div>
+        <ProjectRoot
+          accepts={(item) => {
+            const p = dragged(item);
+            return !!p && structureParent(p) !== null;
+          }}
+          drop={(item) => {
+            const p = dragged(item);
+            if (p) move(p, null);
+          }}
+        />
         <ul>
-          {shown.map((project) => row(project, 0, needle ? path(project) : ""))}
+          {needle
+            ? shown.map((project) => row(project, 0, path(project)))
+            : shown.flatMap((project) => [gap(null, project.id, 0), row(project, 0)])}
+          {!needle && shown.length > 0 && gap(null, null, 0)}
           {canEdit && !needle && (
             adding === null ? (
               <NewProjectRow
@@ -230,6 +289,82 @@ export function ProjectList({
         </ul>
         {needle && !shown.length && <p className="project-list-empty">Ningún proyecto coincide.</p>}
       </section>
+    </div>
+  );
+}
+
+type Target = { accepts: (item: DragItem) => boolean; drop: (item: DragItem) => void | Promise<unknown> };
+
+/** A project row with its grip; dropping another project on it nests that project inside. */
+function ProjectRow({
+  project,
+  depth,
+  canDrag,
+  accepts,
+  drop: onDrop,
+  children,
+}: Target & { project: Resource; depth: number; canDrag: boolean; children: ReactNode }) {
+  const drag = useDrag(
+    `project-row:${project.id}`,
+    { type: "structure", resource: project, label: project.title },
+    !canDrag,
+  );
+  const drop = useDrop(`project-into:${project.id}`, { accepts, drop: onDrop });
+  return (
+    <div
+      ref={(node) => {
+        drag.ref(node);
+        drop.ref(node);
+      }}
+      className={`project-row ${drag.dragging ? "dragging" : ""} ${drop.over ? "drop-over" : ""}`}
+      style={{ paddingInlineStart: 26 + depth * 22 }}
+    >
+      {canDrag && (
+        <button
+          className="drag-grip project-row-grip"
+          aria-label={`Arrastrar ${project.title}`}
+          title="Arrastra para ordenar, o suelta sobre otro proyecto para meterlo dentro"
+          {...drag.handle}
+        >
+          <GripVertical size={14} />
+        </button>
+      )}
+      {children}
+    </div>
+  );
+}
+
+/** The space between two sibling rows: it opens while a sibling is dragged, to reorder. */
+function ProjectGap({ id, depth, accepts, drop: onDrop }: Target & { id: string; depth: number }) {
+  const drop = useDrop(id, { accepts, drop: onDrop });
+  return (
+    <li
+      ref={drop.ref}
+      aria-hidden="true"
+      className={`project-gap ${drop.armed ? "drop-armed" : ""} ${drop.over ? "drop-over" : ""}`}
+      style={{ marginInlineStart: 26 + depth * 22 }}
+    />
+  );
+}
+
+/** The list header; dropping a subproject on it takes it to the top level. */
+function ProjectRoot({ accepts, drop: onDrop }: Target) {
+  const drop = useDrop("project-root", { accepts, drop: onDrop });
+  return (
+    <div
+      ref={drop.ref}
+      className={`project-list-head ${drop.armed ? "drop-armed" : ""} ${drop.over ? "drop-over" : ""}`}
+    >
+      {drop.armed ? (
+        <span className="project-list-head-name">Suelta aquí para llevarlo al nivel superior</span>
+      ) : (
+        <>
+          <span className="project-list-head-name" aria-hidden="true">Proyecto</span>
+          <span aria-hidden="true">Progreso</span>
+          <span aria-hidden="true">Vencidas</span>
+          <span />
+        </>
+      )}
     </div>
   );
 }
@@ -263,7 +398,7 @@ function NewProjectRow({
     <li>
       <form
         className="project-row project-row-new"
-        style={{ paddingInlineStart: 8 + depth * 22 }}
+        style={{ paddingInlineStart: 26 + depth * 22 }}
         onSubmit={(e) => {
           e.preventDefault();
           void submit();
@@ -306,7 +441,9 @@ export function projectTree(projects: Resource[], resources: Resource[]) {
     }
     parent.set(project.id, cursor && cursor !== project.id ? byId.get(cursor) || null : null);
   }
-  const byTitle = (a: Resource, b: Resource) => a.title.localeCompare(b.title);
+  // Projects someone has ordered by dragging come first, in that order; the rest by name.
+  const rank = (r: Resource) => (typeof r.data.order === "number" ? r.data.order : Number.MAX_VALUE);
+  const byTitle = (a: Resource, b: Resource) => rank(a) - rank(b) || a.title.localeCompare(b.title);
   return {
     parentOf: (id: string) => parent.get(id) || null,
     childrenOf: (id: string) => projects.filter((p) => parent.get(p.id)?.id === id).sort(byTitle),

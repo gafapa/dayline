@@ -40,7 +40,7 @@ try {
   await page.getByRole('button',{name:'Nuevo proyecto',exact:true}).click();
   let dialog=page.getByRole('dialog');await dialog.getByLabel('Título',{exact:true}).fill(projectTitle);await dialog.getByLabel('Descripción',{exact:true}).fill('Datos sintéticos para comprobar persistencia, permisos y presentación.');await dialog.getByRole('button',{name:'Crear proyecto',exact:true}).click();
   await page.locator('.resource-dialog').waitFor();await page.locator('.resource-dialog').getByRole('button',{name:'Cerrar',exact:true}).click();
-  await page.getByRole('button',{name:projectTitle,exact:false}).first().click();
+  await page.getByRole('button',{name:projectTitle,exact:true}).first().click();
   await page.getByRole('button',{name:'Nueva tarea',exact:true}).click();dialog=page.getByRole('dialog');await dialog.getByLabel('Título',{exact:true}).fill('Comprobar guardado y sincronización');await dialog.getByLabel('Responsable',{exact:true}).selectOption({label:'Equipo de pruebas'});await dialog.getByRole('button',{name:'Crear tarea',exact:true}).click();
   await page.locator('.resource-dialog').waitFor();
   // The task panel names its project and can widen over the board.
