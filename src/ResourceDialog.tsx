@@ -12,7 +12,7 @@ import { isDelivery } from "../shared/delivery";
 import { canManageRule } from "../shared/automation";
 import { documentMarkdown, documentText, standaloneDocument, type DocumentNode } from "../shared/documents";
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
-import { ArrowDownToLine, ArrowRight, Bell, Plus, Trash2 } from "lucide-react";
+import { ArrowDownToLine, ArrowRight, Bell, Check, Plus, Trash2 } from "lucide-react";
 import { api, send } from "./api";
 import { kindLabels, statusLabels, taskStatuses, type Resource, type ResourceKind } from "../shared/model";
 import WorkflowStateSelect from "./WorkflowStateSelect";
@@ -309,10 +309,11 @@ export function ResourceDialog({
   useEffect(() => {
     if (!dirty) setDraft(resource);
   }, [resource.version, dirty]);
-  const persist = async () => {
+  const persist = async (next: Resource = draft) => {
     setBusy(true);
     try {
-      await save(draft);
+      if (next !== draft) setDraft(next);
+      await save(next);
       setDirty(false);
       notify("Cambios guardados en este dispositivo.");
     } catch (e) {
@@ -371,7 +372,7 @@ export function ResourceDialog({
               .join(" › ")
       }
       close={requestClose}
-      className="resource-dialog"
+      className={`resource-dialog kind-${resource.kind}`}
       panel
     >
       {resource.data.personalNote && (
@@ -434,6 +435,36 @@ export function ResourceDialog({
       <div className="modal-body">
         {tab === "details" && (
           <>
+            {resource.kind === "task" && (
+              <div className="task-quick">
+                <WorkflowStateSelect
+                  label="Estado"
+                  className="task-state-pill"
+                  disabled={!editable}
+                  task={draft}
+                  projects={resources}
+                  onChange={(data) =>
+                    setData({ status: data.status, stateId: data.stateId ?? null })
+                  }
+                />
+                {editable && draft.data.status !== "done" && (
+                  <button
+                    type="button"
+                    className="task-done-button"
+                    disabled={busy}
+                    onClick={() =>
+                      void persist({
+                        ...draft,
+                        data: { ...draft.data, status: "done", stateId: null },
+                      })
+                    }
+                  >
+                    <Check size={15} aria-hidden="true" />
+                    Marcar como hecha
+                  </button>
+                )}
+              </div>
+            )}
             {draft.kind === "automation" && (
               <AutomationFields
                 draft={draft}
@@ -498,7 +529,7 @@ export function ResourceDialog({
               </Field>
             )}
             <div className="form-grid">
-              {["task", "project", "sprint"].includes(resource.kind) && (
+              {["project", "sprint"].includes(resource.kind) && (
                 <Field label="Estado">
                   {resource.kind === "task" ? (
                     <WorkflowStateSelect
@@ -535,7 +566,7 @@ export function ResourceDialog({
                   )}
                 </Field>
               )}
-              {resource.kind !== "project" && !resource.data.personalNote && (
+              {!["project", "task"].includes(resource.kind) && !resource.data.personalNote && (
                 <Field label="Proyecto">
                   <select
                     disabled={!editable || isStructure(resource)}
@@ -620,6 +651,21 @@ export function ResourceDialog({
                       ))}
                     </select>
                   </Field>
+                  <Field label="Etiquetas">
+                    <input
+                      readOnly={!editable}
+                      placeholder={editable ? "Separadas por comas" : ""}
+                      value={(draft.data.labels || []).join(", ")}
+                      onChange={(e) =>
+                        setData({
+                          labels: e.target.value
+                            .split(",")
+                            .map((s) => s.trim())
+                            .filter(Boolean),
+                        })
+                      }
+                    />
+                  </Field>
                   <Field label="Puntos">
                     <input
                       type="number"
@@ -671,30 +717,55 @@ export function ResourceDialog({
             </div>
             {resource.kind === "task" && (
               <>
-                <Field label="Etiquetas">
-                  <input
-                    readOnly={!editable}
-                    placeholder={editable ? "Separadas por comas" : ""}
-                    value={(draft.data.labels || []).join(", ")}
-                    onChange={(e) =>
-                      setData({
-                        labels: e.target.value
-                          .split(",")
-                          .map((s) => s.trim())
-                          .filter(Boolean),
-                      })
-                    }
-                  />
-                </Field>
-                <Field label="Criterios de aceptación">
-                  <textarea
-                    rows={3}
-                    readOnly={!editable}
-                    value={draft.data.acceptance || ""}
-                    onChange={(e) => setData({ acceptance: e.target.value })}
-                  />
-                </Field>
-                <h3>Lista de comprobación</h3>
+                <details className="more-fields" open={!!draft.data.acceptance || undefined}>
+                  <summary>Más campos</summary>
+                  <Field label="Proyecto">
+                    <select
+                      disabled={!editable}
+                      value={draft.data.projectId || ""}
+                      onChange={(e) => setData({ projectId: e.target.value || null })}
+                    >
+                      {!projects.some((p: Resource) => p.data.general) && (
+                        <option value="">General</option>
+                      )}
+                      {projects.map((p: Resource) => (
+                        <option value={p.id} key={p.id}>
+                          {p.title}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="Criterios de aceptación">
+                    <textarea
+                      rows={3}
+                      readOnly={!editable}
+                      value={draft.data.acceptance || ""}
+                      onChange={(e) => setData({ acceptance: e.target.value })}
+                    />
+                  </Field>
+                </details>
+                <div className="checklist-head">
+                  <h3>Lista de comprobación</h3>
+                  {(draft.data.checklist || []).length > 0 && (
+                    <>
+                      <span>
+                        {(draft.data.checklist || []).filter((c: any) => c.done).length} de{" "}
+                        {(draft.data.checklist || []).length}
+                      </span>
+                      <span className="checklist-bar" aria-hidden="true">
+                        <span
+                          style={{
+                            width: `${Math.round(
+                              ((draft.data.checklist || []).filter((c: any) => c.done).length /
+                                (draft.data.checklist || []).length) *
+                                100,
+                            )}%`,
+                          }}
+                        />
+                      </span>
+                    </>
+                  )}
+                </div>
                 {(draft.data.checklist || []).map((item: any) => (
                   <label className="checklist-item" key={item.id}>
                     <input
