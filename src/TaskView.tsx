@@ -1,6 +1,9 @@
 import {
+  CalendarDays,
   Circle,
   CircleCheck,
+  Flag,
+  ListChecks,
   CircleDot,
   Clock3,
   CheckCheck,
@@ -55,14 +58,19 @@ export default function TaskView({
     column.status !== "done" || allDone[column.value]
       ? column.tasks
       : column.tasks.filter((t: Resource) => Date.parse(t.updated_at) >= weekAgo);
-  const due = (t: Resource) =>
-    t.data.dueDate && (
-      <span
-        className={`board-card-due ${t.data.dueDate < new Date().toLocaleDateString("en-CA") && !["done", "cancelled"].includes(t.data.status) ? "late" : ""}`}
-      >
-        {dateText(t.data.dueDate)}
+  const today = new Date().toLocaleDateString("en-CA");
+  const tomorrow = new Date(Date.now() + 86_400_000).toLocaleDateString("en-CA");
+  const due = (t: Resource) => {
+    if (!t.data.dueDate) return null;
+    const open = !["done", "cancelled"].includes(t.data.status);
+    const when = open && t.data.dueDate < today ? "late" : open && t.data.dueDate === today ? "due-today" : "";
+    return (
+      <span className={`board-card-due ${when}`} title={`Fecha límite: ${dateText(t.data.dueDate)}${when === "late" ? " (vencida)" : ""}`}>
+        <CalendarDays size={13} aria-hidden="true" />
+        {t.data.dueDate === today ? "Hoy" : t.data.dueDate === tomorrow ? "Mañana" : dateText(t.data.dueDate)}
       </span>
     );
+  };
   /** Subtasks (child tasks, else checklist items) done out of total. */
   const progress = (t: Resource) => {
     const children = tasks.filter((c: Resource) => c.data.parentId === t.id);
@@ -98,7 +106,7 @@ export default function TaskView({
   };
   if (mode === "board")
     return (
-      <div className="board">
+      <div className={`board ${Object.keys(selected).length ? "selecting" : ""}`}>
         {boardColumns(tasks, projects).map((column) => (
           <BoardColumn
             key={column.value}
@@ -118,6 +126,11 @@ export default function TaskView({
                 place={place}
                 active={t.id === activeId}
               >
+                {showProject && (
+                  <small className="board-card-project">
+                    {projects.find((p: Resource) => p.id === t.data.projectId)?.title || "Sin proyecto"}
+                  </small>
+                )}
                 <div className="task-choice">
                   {toggle && canEdit && (
                     <label className="task-selection">
@@ -131,22 +144,12 @@ export default function TaskView({
                   )}
                   <button onClick={() => open(t)}>{t.title}</button>
                 </div>
-                {showProject && (
-                  <small className="board-card-meta">
-                    <span className="board-card-project">
-                      {projects.find((p: Resource) => p.id === t.data.projectId)?.title || "Sin proyecto"}
-                    </span>
-                    {due(t)}
-                  </small>
-                )}
-                {progress(t) && (
-                  <span
-                    className="board-card-progress"
-                    role="img"
-                    aria-label={`Subtareas: ${progress(t)!.done} de ${progress(t)!.total}`}
-                  >
-                    <span style={{ width: `${Math.round((progress(t)!.done / progress(t)!.total) * 100)}%` }} />
-                  </span>
+                {(t.data.labels || []).length > 0 && (
+                  <ul className="board-card-labels" aria-label="Etiquetas">
+                    {(t.data.labels as string[]).map((label) => (
+                      <li key={label}>{label}</li>
+                    ))}
+                  </ul>
                 )}
                 <TaskCustomFieldValues
                   task={t}
@@ -154,8 +157,24 @@ export default function TaskView({
                   members={members}
                   columns={fieldColumns}
                 />
-                <div>
-                  {!showProject && due(t)}
+                <div className="board-card-foot">
+                  {(t.data.priority === "urgent" || t.data.priority === "high") && (
+                    <span className={`board-card-priority ${t.data.priority}`} title="Prioridad">
+                      <Flag size={13} aria-hidden="true" />
+                      {t.data.priority === "urgent" ? "Urgente" : "Alta"}
+                    </span>
+                  )}
+                  {due(t)}
+                  {progress(t) && (
+                    <span
+                      className={`board-card-subtasks ${progress(t)!.done === progress(t)!.total ? "complete" : ""}`}
+                      aria-label={`Subtareas: ${progress(t)!.done} de ${progress(t)!.total}`}
+                      title="Subtareas hechas"
+                    >
+                      <ListChecks size={13} aria-hidden="true" />
+                      {progress(t)!.done}/{progress(t)!.total}
+                    </span>
+                  )}
                   <Assignee task={t} members={members} canEdit={canEdit} update={update} />
                 </div>
               </BoardCard>

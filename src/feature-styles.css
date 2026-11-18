@@ -1406,9 +1406,6 @@ button.project-row-toggle:hover { background: var(--active); }
 .board-column { background: var(--active); border-radius: 12px; padding: 10px; min-height: 120px; display: flex; flex-direction: column; gap: 8px; }
 .board-column h2 { padding: 2px 4px 2px; font-size: 13px; font-weight: 700; }
 .board-task { margin-bottom: 0; padding: 10px 12px; border-radius: 10px; }
-.board-task > small.board-card-meta { display: flex; justify-content: space-between; gap: 8px; margin: 6px 0; font-size: 12px; color: var(--muted); }
-.board-card-meta span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.board-card-meta .late { color: var(--negative, #b23a17); font-weight: 600; }
 .inline-add { display: flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 8px; border: 0; border-radius: 8px; background: none; color: var(--muted); font-size: 13px; font-weight: 600; justify-content: flex-start; width: 100%; }
 .inline-add:hover { background: color-mix(in srgb, var(--surface) 70%, transparent); color: var(--accent); }
 .inline-add-form input { width: 100%; min-height: 36px; border-radius: 9px; font-size: 14px; }
@@ -1416,8 +1413,6 @@ button.project-row-toggle:hover { background: var(--active); }
 .board-task .task-choice { display: flex; align-items: flex-start; gap: 8px; }
 .board-task .task-choice > button { flex: 1; min-width: 0; min-height: 0; padding: 0; border: 0; background: none; text-align: left; justify-content: flex-start; font-size: 14px; font-weight: 600; line-height: 1.35; color: var(--text); }
 .board-task .task-choice > button:hover { color: var(--accent); text-decoration: underline; }
-.board-task .task-selection { flex: none; margin-top: 1px; }
-.board-task .task-selection input { width: 16px; height: 16px; }
 .task-collection .collection-advanced { margin: 0; }
 .task-collection .collection-advanced > summary { min-height: 32px; display: inline-flex; align-items: center; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; }
 .task-collection .collection-summary { margin: 6px 0 10px; font-size: 13px; }
@@ -1581,8 +1576,6 @@ button.library-toggle:hover { background: var(--active); }
 /* Tareas: counts on quick views, selected card, subtask progress, room for the side panel. */
 .view-chip-count{margin-left:6px;font-weight:500;opacity:.75}
 .board-task[aria-current="true"]{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 30%,transparent)}
-.board-card-progress{display:block;height:4px;border-radius:9px;background:var(--active);overflow:hidden}
-.board-card-progress span{display:block;height:100%;background:var(--teal)}
 .board-more{align-self:flex-start;min-height:32px;padding:0 8px}
 .library-list .document-head{min-height:36px;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);border-top:0;background:var(--raised)}
 @media(max-width:700px){.library-list .document-head{display:none}}
@@ -1625,8 +1618,6 @@ button.library-toggle:hover { background: var(--active); }
 .summary-kind.done { color: var(--teal); }
 .summary-kind.milestone { color: var(--violet); }
 @media (max-width: 650px) { .summary-date { grid-template-columns: 64px minmax(0, 1fr) 24px; } .summary-date .today-chip { display: none; } }
-.board-task > div:last-child .board-card-due { margin-left: auto; font-size: 12px; color: var(--muted); white-space: nowrap; }
-.board-task > div:last-child .board-card-due.late { color: var(--negative, #b23a17); font-weight: 600; }
 
 /* Projects list: drag a row by its grip to reorder (the gaps) or to nest it (another row). */
 .project-row { position: relative; }
@@ -1649,6 +1640,26 @@ button.library-toggle:hover { background: var(--active); }
 .assignee-pick.editable:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
 .assignee-pick .avatar-empty { background: var(--active); color: var(--muted); }
 .board-task .assignee-pick select, .assignee-pick select { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; padding: 0; margin: 0; border: 0; opacity: 0; cursor: pointer; font-size: 16px; }
-.board-task > div:last-child .assignee-pick { margin-left: auto; flex: none; }
-.board-task > div:last-child .board-card-due + .assignee-pick { margin-left: 8px; }
 @media (pointer: coarse) { .assignee-pick.editable .avatar { width: 32px; height: 32px; } }
+
+/* Board card: project, title, labels, then one line with priority, date, subtasks and the assignee. */
+.board-task { display: flex; flex-direction: column; gap: 6px; transition: border-color .12s, box-shadow .12s; }
+.board-task:hover { border-color: var(--control); box-shadow: 0 2px 8px rgba(30, 27, 75, 0.07); }
+.board-task .board-card-project { display: block; margin: 0; font-size: 11.5px; font-weight: 600; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.board-task .task-choice > button { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.board-task .task-selection { order: 2; flex: none; min-width: 0; min-height: 0; margin: 1px 0 0; }
+.board-task .task-selection input { width: 16px; height: 16px; }
+@media (hover: hover) and (pointer: fine) {
+  .board-task .task-selection { opacity: 0; transition: opacity .12s; }
+  .board-task:hover .task-selection, .board-task .task-selection:focus-within, .board.selecting .task-selection, .board-task .task-selection:has(input:checked) { opacity: 1; }
+}
+.board-card-labels { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.board-card-labels li { max-width: 100%; padding: 1px 7px; border-radius: 999px; background: var(--violet-tint); color: var(--violet-ink); font-size: 11px; font-weight: 600; line-height: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.board-card-foot { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; min-height: 24px; margin-top: 2px; font-size: 12px; color: var(--muted); }
+.board-card-foot > span:not(.assignee-pick) { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.board-card-foot .assignee-pick { margin-left: auto; flex: none; }
+.board-card-due.late { color: var(--negative); font-weight: 600; }
+.board-card-due.due-today { color: var(--amber-ink); font-weight: 600; }
+.board-card-priority.urgent { color: var(--red); font-weight: 600; }
+.board-card-priority.high { color: var(--amber-ink); font-weight: 600; }
+.board-card-subtasks.complete { color: var(--positive); }
