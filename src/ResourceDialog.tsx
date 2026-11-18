@@ -380,13 +380,17 @@ export function ResourceDialog({
         </p>
       )}
       <div className="resource-top">
-        <input
+        <textarea
           className="resource-title"
           aria-label="Título"
+          rows={1}
           value={draft.title}
           readOnly={!editable}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") e.preventDefault();
+          }}
           onChange={(e) => {
-            setDraft({ ...draft, title: e.target.value });
+            setDraft({ ...draft, title: e.target.value.replace(/\s*\n\s*/g, " ") });
             setDirty(true);
           }}
         />
@@ -469,6 +473,7 @@ export function ResourceDialog({
                   }
                   readOnly={!editable}
                   rows={4}
+                  placeholder={editable ? "Añade más detalles…" : ""}
                   onChange={(e) =>
                     setData(
                       resource.kind === "sprint"
@@ -615,7 +620,7 @@ export function ResourceDialog({
                       ))}
                     </select>
                   </Field>
-                  <Field label="Estimación en puntos">
+                  <Field label="Puntos">
                     <input
                       type="number"
                       min="0"
@@ -666,9 +671,10 @@ export function ResourceDialog({
             </div>
             {resource.kind === "task" && (
               <>
-                <Field label="Etiquetas, separadas por comas">
+                <Field label="Etiquetas">
                   <input
                     readOnly={!editable}
+                    placeholder={editable ? "Separadas por comas" : ""}
                     value={(draft.data.labels || []).join(", ")}
                     onChange={(e) =>
                       setData({
@@ -1128,9 +1134,11 @@ export function ResourceDialog({
             <button
               className="text-button"
               onClick={() => requestReminder(resource)}
+              aria-label="Crear recordatorio personal"
+              title="Crear recordatorio personal"
             >
               <Bell size={15} />
-              Crear recordatorio personal
+              Recordatorio
             </button>
           )}
           {resource.kind === "document" && (

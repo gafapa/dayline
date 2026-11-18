@@ -159,9 +159,9 @@ export default function TaskView({
                 />
                 <div className="board-card-foot">
                   {(t.data.priority === "urgent" || t.data.priority === "high") && (
-                    <span className={`board-card-priority ${t.data.priority}`} title="Prioridad">
+                    <span className={`board-card-priority ${t.data.priority}`} title={`Prioridad ${t.data.priority === "urgent" ? "urgente" : "alta"}`}>
                       <Flag size={13} aria-hidden="true" />
-                      {t.data.priority === "urgent" ? "Urgente" : "Alta"}
+                      <span className="board-card-priority-text">{t.data.priority === "urgent" ? "Urgente" : "Alta"}</span>
                     </span>
                   )}
                   {due(t)}
