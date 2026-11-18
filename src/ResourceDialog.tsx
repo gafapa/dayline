@@ -10,11 +10,29 @@ import { ResourceRelations } from "./ResourceRelations";
 import { AutomationFields } from "./Automations";
 import { isDelivery } from "../shared/delivery";
 import { canManageRule } from "../shared/automation";
-import { documentMarkdown, documentText, standaloneDocument, type DocumentNode } from "../shared/documents";
+import {
+  documentMarkdown,
+  documentText,
+  standaloneDocument,
+  type DocumentNode,
+} from "../shared/documents";
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
-import { ArrowDownToLine, ArrowRight, Bell, Check, Plus, Trash2 } from "lucide-react";
+import {
+  ArrowDownToLine,
+  ArrowRight,
+  Bell,
+  Check,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { api, send } from "./api";
-import { kindLabels, statusLabels, taskStatuses, type Resource, type ResourceKind } from "../shared/model";
+import {
+  kindLabels,
+  statusLabels,
+  taskStatuses,
+  type Resource,
+  type ResourceKind,
+} from "../shared/model";
 import WorkflowStateSelect from "./WorkflowStateSelect";
 const CollaborativeEditor = lazy(() => import("./CollaborativeEditor"));
 import { StatusIcon, download } from "./ui-common";
@@ -365,7 +383,11 @@ export function ResourceDialog({
         resource.data.personalNote
           ? "Nota personal"
           : [
-              projects.find((p: Resource) => p.id === resource.data.projectId && resource.kind !== "project")?.title,
+              projects.find(
+                (p: Resource) =>
+                  p.id === resource.data.projectId &&
+                  resource.kind !== "project",
+              )?.title,
               kindLabels[resource.kind as ResourceKind],
             ]
               .filter(Boolean)
@@ -391,7 +413,10 @@ export function ResourceDialog({
             if (e.key === "Enter") e.preventDefault();
           }}
           onChange={(e) => {
-            setDraft({ ...draft, title: e.target.value.replace(/\s*\n\s*/g, " ") });
+            setDraft({
+              ...draft,
+              title: e.target.value.replace(/\s*\n\s*/g, " "),
+            });
             setDirty(true);
           }}
         />
@@ -444,7 +469,10 @@ export function ResourceDialog({
                   task={draft}
                   projects={resources}
                   onChange={(data) =>
-                    setData({ status: data.status, stateId: data.stateId ?? null })
+                    setData({
+                      status: data.status,
+                      stateId: data.stateId ?? null,
+                    })
                   }
                 />
                 {editable && draft.data.status !== "done" && (
@@ -537,55 +565,59 @@ export function ResourceDialog({
                       task={draft}
                       projects={resources}
                       onChange={(data) =>
-                        setData({ status: data.status, stateId: data.stateId ?? null })
+                        setData({
+                          status: data.status,
+                          stateId: data.stateId ?? null,
+                        })
                       }
                     />
                   ) : (
-                  <select
-                    disabled={!editable}
-                    value={draft.data.status || ""}
-                    onChange={(e) => setData({ status: e.target.value })}
-                  >
-                    {(resource.kind === "task"
-                      ? taskStatuses
-                      : resource.kind === "sprint"
-                        ? ["planned", "active", "completed"]
-                        : ["active", "paused", "completed"]
-                    ).map((s) => (
-                      <option
-                        value={s}
-                        key={s}
-                        disabled={
-                          resource.kind === "sprint" && s === "completed"
-                        }
-                      >
-                        {statusLabels[s]}
-                      </option>
-                    ))}
-                  </select>
+                    <select
+                      disabled={!editable}
+                      value={draft.data.status || ""}
+                      onChange={(e) => setData({ status: e.target.value })}
+                    >
+                      {(resource.kind === "task"
+                        ? taskStatuses
+                        : resource.kind === "sprint"
+                          ? ["planned", "active", "completed"]
+                          : ["active", "paused", "completed"]
+                      ).map((s) => (
+                        <option
+                          value={s}
+                          key={s}
+                          disabled={
+                            resource.kind === "sprint" && s === "completed"
+                          }
+                        >
+                          {statusLabels[s]}
+                        </option>
+                      ))}
+                    </select>
                   )}
                 </Field>
               )}
-              {!["project", "task"].includes(resource.kind) && !resource.data.personalNote && (
-                <Field label="Proyecto">
-                  <select
-                    disabled={!editable || isStructure(resource)}
-                    value={draft.data.projectId || ""}
-                    onChange={(e) =>
-                      setData({ projectId: e.target.value || null })
-                    }
-                  >
-                    {!projects.some((p: Resource) => p.data.general) && (
-                      <option value="">General</option>
-                    )}
-                    {projects.map((p: Resource) => (
-                      <option value={p.id} key={p.id}>
-                        {p.title}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-              )}
+              {!["project", "task"].includes(resource.kind) &&
+                !resource.data.personalNote && (
+                  <Field label="Proyecto">
+                    <select
+                      disabled={!editable || isStructure(resource)}
+                      value={draft.data.projectId || ""}
+                      onChange={(e) =>
+                        setData({ projectId: e.target.value || null })
+                      }
+                    >
+                      {!projects.some((p: Resource) => p.data.general) && (
+                        <option value="">General</option>
+                      )}
+                      {projects.map((p: Resource) => (
+                        <option value={p.id} key={p.id}>
+                          {p.title}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                )}
               {isStructure(resource) && moveResource && (
                 <div className="field">
                   <span>Ubicación</span>
@@ -717,24 +749,31 @@ export function ResourceDialog({
             </div>
             {resource.kind === "task" && (
               <>
-                <details className="more-fields" open={!!draft.data.acceptance || undefined}>
+                <details
+                  className="more-fields"
+                  open={!!draft.data.acceptance || undefined}
+                >
                   <summary>Más campos</summary>
-                  <Field label="Proyecto">
-                    <select
-                      disabled={!editable}
-                      value={draft.data.projectId || ""}
-                      onChange={(e) => setData({ projectId: e.target.value || null })}
-                    >
-                      {!projects.some((p: Resource) => p.data.general) && (
-                        <option value="">General</option>
-                      )}
-                      {projects.map((p: Resource) => (
-                        <option value={p.id} key={p.id}>
-                          {p.title}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
+                  <div className="form-grid">
+                    <Field label="Proyecto">
+                      <select
+                        disabled={!editable}
+                        value={draft.data.projectId || ""}
+                        onChange={(e) =>
+                          setData({ projectId: e.target.value || null })
+                        }
+                      >
+                        {!projects.some((p: Resource) => p.data.general) && (
+                          <option value="">General</option>
+                        )}
+                        {projects.map((p: Resource) => (
+                          <option value={p.id} key={p.id}>
+                            {p.title}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                  </div>
                   <Field label="Criterios de aceptación">
                     <textarea
                       rows={3}
@@ -744,77 +783,88 @@ export function ResourceDialog({
                     />
                   </Field>
                 </details>
-                <div className="checklist-head">
-                  <h3>Lista de comprobación</h3>
-                  {(draft.data.checklist || []).length > 0 && (
-                    <>
-                      <span>
-                        {(draft.data.checklist || []).filter((c: any) => c.done).length} de{" "}
-                        {(draft.data.checklist || []).length}
-                      </span>
-                      <span className="checklist-bar" aria-hidden="true">
-                        <span
-                          style={{
-                            width: `${Math.round(
-                              ((draft.data.checklist || []).filter((c: any) => c.done).length /
-                                (draft.data.checklist || []).length) *
-                                100,
-                            )}%`,
-                          }}
-                        />
-                      </span>
-                    </>
+                <section
+                  className="checklist"
+                  aria-label="Lista de comprobación"
+                >
+                  <div className="checklist-head">
+                    <h3>Lista de comprobación</h3>
+                    {(draft.data.checklist || []).length > 0 && (
+                      <>
+                        <span>
+                          {
+                            (draft.data.checklist || []).filter(
+                              (c: any) => c.done,
+                            ).length
+                          }{" "}
+                          de {(draft.data.checklist || []).length}
+                        </span>
+                        <span className="checklist-bar" aria-hidden="true">
+                          <span
+                            style={{
+                              width: `${Math.round(
+                                ((draft.data.checklist || []).filter(
+                                  (c: any) => c.done,
+                                ).length /
+                                  (draft.data.checklist || []).length) *
+                                  100,
+                              )}%`,
+                            }}
+                          />
+                        </span>
+                      </>
+                    )}
+                  </div>
+                  {(draft.data.checklist || []).map((item: any) => (
+                    <label className="checklist-item" key={item.id}>
+                      <input
+                        type="checkbox"
+                        checked={item.done}
+                        disabled={!editable}
+                        onChange={(e) =>
+                          setData({
+                            checklist: draft.data.checklist.map((c: any) =>
+                              c.id === item.id
+                                ? { ...c, done: e.target.checked }
+                                : c,
+                            ),
+                          })
+                        }
+                      />
+                      <span>{item.text}</span>
+                    </label>
+                  ))}
+                  {editable && (
+                    <form
+                      className="inline-form"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        const form = e.currentTarget;
+                        const text = String(
+                          new FormData(form).get("item") || "",
+                        ).trim();
+                        if (text)
+                          setData({
+                            checklist: [
+                              ...(draft.data.checklist || []),
+                              { id: crypto.randomUUID(), text, done: false },
+                            ],
+                          });
+                        form.reset();
+                      }}
+                    >
+                      <input
+                        name="item"
+                        aria-label="Nuevo punto de comprobación"
+                        placeholder="Añadir un punto…"
+                        maxLength={500}
+                      />
+                      <button aria-label="Añadir punto">
+                        <Plus size={16} />
+                      </button>
+                    </form>
                   )}
-                </div>
-                {(draft.data.checklist || []).map((item: any) => (
-                  <label className="checklist-item" key={item.id}>
-                    <input
-                      type="checkbox"
-                      checked={item.done}
-                      disabled={!editable}
-                      onChange={(e) =>
-                        setData({
-                          checklist: draft.data.checklist.map((c: any) =>
-                            c.id === item.id
-                              ? { ...c, done: e.target.checked }
-                              : c,
-                          ),
-                        })
-                      }
-                    />
-                    <span>{item.text}</span>
-                  </label>
-                ))}
-                {editable && (
-                  <form
-                    className="inline-form"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      const form = e.currentTarget;
-                      const text = String(
-                        new FormData(form).get("item") || "",
-                      ).trim();
-                      if (text)
-                        setData({
-                          checklist: [
-                            ...(draft.data.checklist || []),
-                            { id: crypto.randomUUID(), text, done: false },
-                          ],
-                        });
-                      form.reset();
-                    }}
-                  >
-                    <input
-                      name="item"
-                      aria-label="Nuevo punto de comprobación"
-                      placeholder="Añadir un punto…"
-                      maxLength={500}
-                    />
-                    <button aria-label="Añadir punto">
-                      <Plus size={16} />
-                    </button>
-                  </form>
-                )}
+                </section>
               </>
             )}
             {resource.kind === "project" && (
@@ -897,7 +947,7 @@ export function ResourceDialog({
                 )}
               </>
             )}
-            {linked.length > 0 && (
+            {linked.length > 0 && resource.kind !== "task" && (
               <section>
                 <h3>Elementos relacionados</h3>
                 {linked.map((r: Resource) => (

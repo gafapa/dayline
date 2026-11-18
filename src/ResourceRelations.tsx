@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Plus, ArrowRight, Trash2 } from "lucide-react";
+import { Plus, ArrowRight, Trash2, X } from "lucide-react";
+import { StatusIcon } from "./ui-common";
 import type { Resource } from "../shared/model";
 import { documentReferences } from "../shared/documents";
 import { Field } from "./components/Primitives";
@@ -57,176 +58,62 @@ export function ResourceRelations({
     ...definitions.map((f) => f.id),
     ...snapshots.map((f) => f.id),
   ]);
+  const planned = !!(
+    draft.data.parentId ||
+    (draft.data.taskType && draft.data.taskType !== "feature") ||
+    draft.data.startDate ||
+    (draft.data.recurrence && draft.data.recurrence !== "none") ||
+    draft.data.dependencies?.length ||
+    draft.data.reviewers?.length
+  );
   const backlinks = resources.filter(
     (r) =>
       r.id !== draft.id &&
       r.kind === "document" &&
       documentReferences(r.data.content).includes(draft.id),
   );
+  const parentField = (
+    <Field
+      label={
+        draft.kind === "task"
+          ? "Tarea principal"
+          : draft.kind === "document"
+            ? "Página superior"
+            : "Proyecto superior"
+      }
+    >
+      <select
+        value={draft.data.parentId || ""}
+        disabled={!editable}
+        onChange={(e) => setData({ parentId: e.target.value || null })}
+      >
+        <option value="">Sin elemento superior</option>
+        {candidates.map((r) => (
+          <option value={r.id} key={r.id}>
+            {r.title}
+          </option>
+        ))}
+      </select>
+    </Field>
+  );
   return (
     <section className="task-extra-fields">
-      {!draft.data.personalNote &&
-        ["project", "document", "task"].includes(draft.kind) && (
-          <Field
-            label={
-              draft.kind === "task"
-                ? "Tarea principal"
-                : draft.kind === "document"
-                  ? "Página superior"
-                  : "Proyecto superior"
-            }
-          >
-            <select
-              value={draft.data.parentId || ""}
-              disabled={!editable}
-              onChange={(e) => setData({ parentId: e.target.value || null })}
-            >
-              <option value="">Sin elemento superior</option>
-              {candidates.map((r) => (
-                <option value={r.id} key={r.id}>
-                  {r.title}
-                </option>
-              ))}
-            </select>
-          </Field>
-        )}
-      {draft.kind === "task" && (
-        <>
-          <div className="form-grid">
-            <Field label="Tipo de tarea">
-              <select
-                value={draft.data.taskType || "feature"}
-                disabled={!editable}
-                onChange={(e) => setData({ taskType: e.target.value })}
-              >
-                {[
-                  ["feature", "Funcionalidad"],
-                  ["bug", "Error"],
-                  ["research", "Investigación"],
-                  ["maintenance", "Mantenimiento"],
-                  ["debt", "Deuda técnica"],
-                  ["regression", "Regresión"],
-                ].map(([v, l]) => (
-                  <option key={v} value={v}>
-                    {l}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Inicio previsto">
-              <input
-                type="date"
-                value={draft.data.startDate || ""}
-                readOnly={!editable}
-                onChange={(e) => setData({ startDate: e.target.value })}
-              />
-            </Field>
-          </div>
-          <div className="form-grid">
-            <Field label="Al completar, repetir">
-              <select
-                value={draft.data.recurrence || "none"}
-                disabled={!editable}
-                onChange={(e) =>
-                  setData({
-                    recurrence: e.target.value,
-                    timeZone:
-                      draft.data.timeZone ||
-                      Intl.DateTimeFormat().resolvedOptions().timeZone,
-                  })
-                }
-              >
-                <option value="none">No repetir</option>
-                <option value="daily">Al día siguiente</option>
-                <option value="weekly">Cada semana</option>
-                <option value="monthly">Cada mes</option>
-              </select>
-            </Field>
-            {draft.data.recurrence && draft.data.recurrence !== "none" && (
-              <Field label="Final de la serie (opcional)">
-                <input
-                  type="date"
-                  value={draft.data.recurrenceEndDate || ""}
-                  min={draft.data.dueDate || undefined}
-                  readOnly={!editable}
-                  onChange={(e) =>
-                    setData({ recurrenceEndDate: e.target.value })
-                  }
-                />
-              </Field>
-            )}
-          </div>
-          {draft.data.recurrence && draft.data.recurrence !== "none" && (
-            <p className="muted">
-              Al completar se crea una sola tarea con la siguiente fecha futura,
-              sin sprint y con la lista de comprobación reiniciada. Zona
-              horaria: {draft.data.timeZone || "UTC"}.
-            </p>
-          )}
-          <Field label="Depende de">
-            <select
-              multiple
-              disabled={!editable}
-              value={draft.data.dependencies || []}
-              onChange={(e) =>
-                setData({
-                  dependencies: [...e.target.selectedOptions].map(
-                    (o) => o.value,
-                  ),
-                })
-              }
-            >
-              {tasks.map((r) => (
-                <option value={r.id} key={r.id}>
-                  {r.title}
-                </option>
-              ))}
-            </select>
-          </Field>
-          {blockers.length > 0 && (
-            <div className="blocked-notice">
-              Pendiente de {blockers.length} tareas previas.
-              <div className="relation-list">
-                {blockers.map((r) => (
-                  <button
-                    className="text-button"
-                    onClick={() => open(r)}
-                    key={r.id}
-                  >
-                    {r.title}
-                    <ArrowRight size={14} />
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          <Field label="Revisores">
-            <select
-              multiple
-              disabled={!editable}
-              value={draft.data.reviewers || []}
-              onChange={(e) =>
-                setData({
-                  reviewers: [...e.target.selectedOptions].map((o) => o.value),
-                })
-              }
-            >
-              {members.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </>
-      )}
-      {children.length > 0 && (
-        <section>
+      {(children.length > 0 || (draft.kind === "task" && editable)) && (
+        <section className="relation-children">
           <h3>{draft.kind === "task" ? "Subtareas" : "Elementos anidados"}</h3>
           <div className="relation-list">
             {children.map((r) => (
-              <button className="linked-row" onClick={() => open(r)} key={r.id}>
-                {r.title}
+              <button
+                className="linked-row relation-row"
+                onClick={() => open(r)}
+                key={r.id}
+              >
+                {r.kind === "task" && <StatusIcon status={r.data.status} />}
+                <span
+                  className={r.data.status === "done" ? "relation-done" : ""}
+                >
+                  {r.title}
+                </span>
                 <ArrowRight size={14} />
               </button>
             ))}
@@ -302,6 +189,209 @@ export function ResourceRelations({
             </button>
           </form>
         )}
+      {draft.kind === "task" ? (
+        <details
+          className="more-fields relation-details"
+          open={planned || undefined}
+        >
+          <summary>Planificación y relaciones</summary>
+          <div className="form-grid">
+            {parentField}
+            <Field label="Tipo de tarea">
+              <select
+                value={draft.data.taskType || "feature"}
+                disabled={!editable}
+                onChange={(e) => setData({ taskType: e.target.value })}
+              >
+                {[
+                  ["feature", "Funcionalidad"],
+                  ["bug", "Error"],
+                  ["research", "Investigación"],
+                  ["maintenance", "Mantenimiento"],
+                  ["debt", "Deuda técnica"],
+                  ["regression", "Regresión"],
+                ].map(([v, l]) => (
+                  <option key={v} value={v}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Inicio previsto">
+              <input
+                type="date"
+                value={draft.data.startDate || ""}
+                readOnly={!editable}
+                onChange={(e) => setData({ startDate: e.target.value })}
+              />
+            </Field>
+            <Field label="Al completar, repetir">
+              <select
+                value={draft.data.recurrence || "none"}
+                disabled={!editable}
+                onChange={(e) =>
+                  setData({
+                    recurrence: e.target.value,
+                    timeZone:
+                      draft.data.timeZone ||
+                      Intl.DateTimeFormat().resolvedOptions().timeZone,
+                  })
+                }
+              >
+                <option value="none">No repetir</option>
+                <option value="daily">Al día siguiente</option>
+                <option value="weekly">Cada semana</option>
+                <option value="monthly">Cada mes</option>
+              </select>
+            </Field>
+            {draft.data.recurrence && draft.data.recurrence !== "none" && (
+              <Field label="Final de la serie (opcional)">
+                <input
+                  type="date"
+                  value={draft.data.recurrenceEndDate || ""}
+                  min={draft.data.dueDate || undefined}
+                  readOnly={!editable}
+                  onChange={(e) =>
+                    setData({ recurrenceEndDate: e.target.value })
+                  }
+                />
+              </Field>
+            )}
+            {draft.data.recurrence && draft.data.recurrence !== "none" && (
+              <p className="muted">
+                Al completar se crea una sola tarea con la siguiente fecha
+                futura, sin sprint y con la lista de comprobación reiniciada.
+                Zona horaria: {draft.data.timeZone || "UTC"}.
+              </p>
+            )}
+            <div className="field relation-picks">
+              <span>Depende de</span>
+              <div>
+                {(draft.data.dependencies || []).map((id: string) => {
+                  const task = tasks.find((t) => t.id === id);
+                  return (
+                    <span className="relation-chip" key={id}>
+                      {task && <StatusIcon status={task.data.status} />}
+                      <button
+                        type="button"
+                        className="text-button"
+                        onClick={() => task && open(task)}
+                      >
+                        {task?.title || "Tarea no disponible"}
+                      </button>
+                      {editable && (
+                        <button
+                          type="button"
+                          className="icon-button"
+                          aria-label={`Quitar dependencia ${task?.title || ""}`.trim()}
+                          onClick={() =>
+                            setData({
+                              dependencies: (
+                                draft.data.dependencies || []
+                              ).filter((d: string) => d !== id),
+                            })
+                          }
+                        >
+                          <X size={13} />
+                        </button>
+                      )}
+                    </span>
+                  );
+                })}
+                {editable && (
+                  <select
+                    aria-label="Añadir dependencia"
+                    value=""
+                    onChange={(e) =>
+                      e.target.value &&
+                      setData({
+                        dependencies: [
+                          ...(draft.data.dependencies || []),
+                          e.target.value,
+                        ],
+                      })
+                    }
+                  >
+                    <option value="">+ Añadir tarea previa…</option>
+                    {tasks
+                      .filter(
+                        (r) => !(draft.data.dependencies || []).includes(r.id),
+                      )
+                      .map((r) => (
+                        <option value={r.id} key={r.id}>
+                          {r.title}
+                        </option>
+                      ))}
+                  </select>
+                )}
+                {!editable && !(draft.data.dependencies || []).length && (
+                  <span className="muted">Ninguna</span>
+                )}
+              </div>
+            </div>
+            <div
+              className="field relation-picks"
+              role="group"
+              aria-label="Revisores"
+            >
+              <span>Revisores</span>
+              <div>
+                {members.map((m) => {
+                  const on = (draft.data.reviewers || []).includes(m.id);
+                  return (
+                    <button
+                      type="button"
+                      key={m.id}
+                      className={`reviewer-chip ${on ? "on" : ""}`}
+                      aria-pressed={on}
+                      disabled={!editable}
+                      onClick={() =>
+                        setData({
+                          reviewers: on
+                            ? (draft.data.reviewers || []).filter(
+                                (r: string) => r !== m.id,
+                              )
+                            : [...(draft.data.reviewers || []), m.id],
+                        })
+                      }
+                    >
+                      <span className="avatar small">
+                        {m.name?.slice(0, 2).toUpperCase()}
+                      </span>
+                      {m.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </details>
+      ) : (
+        !draft.data.personalNote &&
+        ["project", "document"].includes(draft.kind) &&
+        parentField
+      )}
+      {draft.kind === "task" && (
+        <>
+          {blockers.length > 0 && (
+            <div className="blocked-notice">
+              Pendiente de {blockers.length} tareas previas.
+              <div className="relation-list">
+                {blockers.map((r) => (
+                  <button
+                    className="text-button"
+                    onClick={() => open(r)}
+                    key={r.id}
+                  >
+                    {r.title}
+                    <ArrowRight size={14} />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
       {backlinks.length > 0 && (
         <section>
           <h3>Referencias a este elemento</h3>
@@ -354,8 +444,15 @@ export function ResourceRelations({
         </section>
       )}
       {["task", "project"].includes(draft.kind) && (
-        <section>
-          <h3>Campos personalizados</h3>
+        <details
+          className="more-fields custom-fields-details"
+          open={
+            Object.keys(draft.data.customFields || {}).some(
+              (name) => !managed.has(name),
+            ) || undefined
+          }
+        >
+          <summary>Campos personalizados</summary>
           {Object.entries(draft.data.customFields || {})
             .filter(([name]) => !managed.has(name))
             .map(([name, value]) => (
@@ -452,7 +549,7 @@ export function ResourceRelations({
               <button>Añadir campo</button>
             </form>
           )}
-        </section>
+        </details>
       )}
     </section>
   );

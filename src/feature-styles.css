@@ -1721,3 +1721,87 @@ button.library-toggle:hover { background: var(--active); }
 .checklist-bar > span { background: var(--teal); border-radius: 9px; }
 .checklist-item:has(input:checked) > span { color: var(--muted); text-decoration: line-through; }
 .modal.panel .more-fields > .field > span { font-size: 12px; font-weight: 700; letter-spacing: .02em; color: var(--muted); text-transform: uppercase; }
+
+/* Task panel below the description: the same section headings, rows and folds as above. */
+.modal.panel .modal-body h3 { font-size: 12px; font-weight: 700; letter-spacing: .02em; color: var(--muted); text-transform: uppercase; }
+.modal.panel .task-extra-fields { display: flex; flex-direction: column; gap: 16px; padding-top: 0; border-top: 0; }
+.modal.panel .task-extra-fields > section { display: flex; flex-direction: column; gap: 8px; }
+.modal.panel .task-extra-fields > section > h3 { margin: 0; }
+.modal.panel .relation-list { gap: 2px; margin: 0; }
+.modal.panel .relation-list .linked-row, .modal.panel .task-extra-fields > section > .linked-row { min-height: 36px; padding: 6px 10px; border-radius: 8px; }
+.modal.panel .relation-details .form-grid, .modal.panel .custom-fields-details .form-grid { padding: 0; border: 0; }
+.modal.panel .form-grid > .field:has(select[multiple]) { align-items: start; }
+.modal.panel .form-grid > .field:has(select[multiple]) > span { padding-top: 8px; }
+.modal.panel .form-grid > .field select[multiple] { min-height: 0; height: 88px; padding: 4px; border-color: var(--border); background-color: var(--raised); }
+.modal.panel .relation-details > .form-grid > p { margin: 0 0 4px; font-size: 12px; }
+.modal.panel .blocked-notice { border-left: 0; border-radius: 10px; background: var(--amber-tint); color: var(--amber-ink); }
+.modal.panel .custom-fields-details .custom-field-row { gap: 8px; }
+.modal.panel .attachments { gap: 8px; }
+.modal.panel .attachments h3 { margin: 0; }
+.more-fields > summary { list-style: none; gap: 6px; }
+.more-fields > summary::-webkit-details-marker { display: none; }
+.more-fields > summary::before { content: ""; width: 6px; height: 6px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); transition: transform .12s; margin-right: 2px; }
+.more-fields[open] > summary::before { transform: rotate(45deg); }
+.more-fields > summary:hover { color: var(--text); }
+
+/* Below the description, visually: quiet rows, soft folded cards, chips instead of list boxes. */
+.modal.panel .modal-body { gap: 22px; }
+.modal.panel .checklist-head { margin-bottom: -10px; }
+.modal.panel .checklist-item { align-items: center; min-height: 36px; margin: 0 -8px; padding: 0 8px; border-radius: 8px; font-size: 14px; }
+.modal.panel .checklist-item:hover { background: var(--raised); }
+.modal.panel .checklist-item input { width: 17px; height: 17px; margin: 0; }
+.modal.panel .inline-form { position: relative; gap: 0; margin: -6px -8px 0; }
+.modal.panel .inline-form input { min-height: 36px; padding: 0 44px 0 10px; border-color: transparent; border-radius: 8px; background: none; font-size: 14px; }
+.modal.panel .inline-form input:hover { background: var(--raised); }
+.modal.panel .inline-form input:focus { border-color: var(--accent); background: var(--surface); }
+.modal.panel .inline-form input::placeholder { color: var(--muted); }
+.modal.panel .inline-form button { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 30px; min-width: 30px; height: 30px; min-height: 30px; padding: 0; border: 0; border-radius: 7px; background: none; color: var(--muted); }
+.modal.panel .inline-form button:hover { background: var(--active); color: var(--accent); }
+.modal.panel .relation-children { gap: 4px; }
+.modal.panel .relation-children > h3 { margin-bottom: 2px; }
+.modal.panel .relation-row { display: flex; align-items: center; gap: 10px; min-height: 38px; margin: 0 -8px; padding: 0 8px; width: calc(100% + 16px); border: 0; border-radius: 8px; font-size: 14px; color: var(--text); }
+.modal.panel .relation-row:hover { background: var(--raised); }
+.modal.panel .relation-row > svg:last-child { color: var(--muted); }
+.modal.panel .relation-row .relation-done { color: var(--muted); text-decoration: line-through; }
+.modal.panel .relation-children + .inline-form, .modal.panel .relation-children + form { margin-top: -18px; }
+/* Folded groups: a row that opens into a soft card. */
+.modal.panel .more-fields { gap: 0; margin-top: 0; border: 1px solid var(--rule); border-radius: 12px; background: var(--raised); }
+.modal.panel .more-fields > summary { align-self: stretch; min-height: 44px; padding: 0 14px; border-radius: 12px; font-size: 13.5px; color: var(--text); }
+.modal.panel .more-fields > summary:hover { background: var(--active); }
+.modal.panel .more-fields[open] > summary { margin: 0; border-radius: 12px 12px 0 0; }
+.modal.panel .more-fields > :not(summary) { margin: 0 14px; }
+.modal.panel .more-fields > :last-child:not(summary) { margin-bottom: 14px; }
+.modal.panel .more-fields > .field { margin-bottom: 12px; }
+.modal.panel .more-fields .form-grid > .field select, .modal.panel .more-fields .form-grid > .field input { background-color: transparent; }
+.modal.panel .more-fields .form-grid > .field select:hover:not(:disabled), .modal.panel .more-fields .form-grid > .field input:hover:not([readonly]) { background-color: var(--surface); }
+.modal.panel .more-fields textarea { background: var(--surface); }
+/* Dependencies and reviewers. */
+.relation-picks { display: grid; grid-template-columns: 130px minmax(0, 1fr); align-items: start; gap: 8px; padding: 6px 0; }
+.relation-picks > span { padding-top: 6px; font-size: 13px; font-weight: 500; color: var(--muted); }
+.relation-picks > div { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-width: 0; }
+.relation-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-height: 30px; padding: 0 4px 0 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); font-size: 13px; }
+.relation-chip > .text-button { min-height: 0; padding: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-weight: 500; }
+.relation-chip > .icon-button { width: 24px; min-width: 24px; height: 24px; min-height: 24px; border-radius: 999px; }
+.relation-picks select { width: auto; max-width: 100%; min-height: 30px; padding: 0 28px 0 10px; border: 1px dashed var(--control); border-radius: 999px; background-color: transparent; font-size: 13px; color: var(--muted); }
+.reviewer-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 0 12px 0 3px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--text); font-size: 13px; font-weight: 500; }
+.reviewer-chip .avatar.small { width: 24px; height: 24px; font-size: 10px; }
+.reviewer-chip.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); color: var(--accent); }
+.reviewer-chip:disabled { opacity: 1; cursor: default; }
+@media (max-width: 650px) { .relation-picks { grid-template-columns: 110px minmax(0, 1fr); } }
+/* Ad-hoc fields: one line to add a field. */
+.modal.panel .custom-fields-details form.custom-field-row { grid-template-columns: minmax(0, 1fr) 120px auto; align-items: end; }
+.modal.panel .custom-fields-details .field > span { font-size: 12px; color: var(--muted); }
+/* Attachments: a drop zone. */
+.modal.panel .attachments { display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1.5px dashed var(--control); border-radius: 12px; background: var(--surface); }
+.modal.panel .attachments .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0; }
+.modal.panel .attachments h3 svg { width: 14px; height: 14px; }
+.modal.panel .attachments > p { margin: 0; color: var(--muted); }
+.modal.panel .attachments .upload-button { min-height: 32px; padding: 0 12px; border-radius: 8px; font-size: 13px; }
+.modal.panel .attachment-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--rule); background: var(--raised); }
+.modal.panel .attachment-row > span { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.modal.panel .checklist { display: flex; flex-direction: column; gap: 0; }
+.modal.panel .checklist .checklist-head { margin-bottom: 6px; }
+.modal.panel .checklist .inline-form { margin-top: 0; }
+.modal.panel .more-fields > .form-grid { padding: 4px 0; border: 0; }
+.modal.panel .form-grid > .field.relation-picks { align-items: start; }
+.modal.panel .form-grid > .field.relation-picks select { width: auto; min-height: 30px; border: 1px dashed var(--control); border-radius: 999px; font-size: 13px; color: var(--muted); }

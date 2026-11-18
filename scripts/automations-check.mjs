@@ -166,6 +166,9 @@ try {
     .first()
     .click();
   dialog = page.locator(".resource-dialog");
+  // Recurrence lives in the folded "Planificación y relaciones" part; open it unless it already is.
+  const planning = dialog.locator("details.relation-details");
+  if ((await planning.getAttribute("open")) === null) await planning.locator("summary").click();
   await dialog
     .getByLabel("Al completar, repetir", { exact: true })
     .selectOption("daily");
