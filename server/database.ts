@@ -1,7 +1,9 @@
 import pg from "pg";
 import { migrateToGeneralProjects } from "./general-project.js";
 import { DOCUMENT_SCHEMA_VERSION } from "../shared/document-protocol.js";
-import { mkdir } from "node:fs/promises";
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
 
 export interface Connection {
   query<T = any>(sql: string, parameters?: any[]): Promise<{ rows: T[] }>;
@@ -13,7 +15,7 @@ export interface Database extends Connection {
 
 export async function createDatabase(
   url = process.env.DATABASE_URL,
-  path = ".local/database",
+  path = process.env.PGLITE_DIR || ".local/database",
 ): Promise<Database> {
   if (url) {
     const pool = new pg.Pool({
@@ -47,7 +49,10 @@ export async function createDatabase(
     throw new Error("DATABASE_URL is required in production");
   const { PGlite } = await import("@electric-sql/pglite");
   if (path !== "memory://") await mkdir(path, { recursive: true });
-  const database = new PGlite(path);
+  const database =
+    path === "memory://"
+      ? new PGlite({ loadDataDir: await emptyCluster(PGlite) })
+      : new PGlite(path);
   await database.waitReady;
   let queue = Promise.resolve();
   const exclusive = <T>(run: () => Promise<T>): Promise<T> => {
@@ -68,6 +73,37 @@ export async function createDatabase(
       ),
     close: () => exclusive(() => database.close()),
   };
+}
+
+/**
+ * In-memory databases (tests) start from a saved empty cluster: creating one from scratch takes
+ * seconds, loading the copy a fraction of that. The copy depends only on the PGlite version.
+ */
+async function emptyCluster(PGlite: typeof import("@electric-sql/pglite").PGlite) {
+  // The package does not export its package.json: find it above the resolved entry point.
+  let dir = dirname(createRequire(import.meta.url).resolve("@electric-sql/pglite"));
+  let version = "";
+  while (!version && dir !== dirname(dir)) {
+    try {
+      const pkg = JSON.parse(await readFile(join(dir, "package.json"), "utf8"));
+      if (pkg.name === "@electric-sql/pglite") version = pkg.version;
+    } catch {}
+    dir = dirname(dir);
+  }
+  const file = `.local/pglite-empty-${version}.tar`;
+  try {
+    return new Blob([await readFile(file)]);
+  } catch {
+    const fresh = new PGlite("memory://");
+    await fresh.waitReady;
+    const dump = await fresh.dumpDataDir("none");
+    await fresh.close();
+    await mkdir(".local", { recursive: true });
+    const partial = `${file}.${process.pid}`;
+    await writeFile(partial, Buffer.from(await dump.arrayBuffer()));
+    await rename(partial, file);
+    return dump;
+  }
 }
 
 export async function migrate(db: Database) {

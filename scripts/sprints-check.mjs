@@ -1,4 +1,4 @@
-import { chromium } from "@playwright/test";
+import { chromium, expect } from "@playwright/test";
 import { controlledByServiceWorker } from './service-worker-helper.mjs';
 import { openSection } from './navigation-helper.mjs';
 import { writeFile } from "node:fs/promises";
@@ -333,12 +333,14 @@ try {
     .last()
     .click();
   await page.getByText("Plan sincronizado", { exact: true }).waitFor();
-  await page
-    .getByRole("button", { name: "Preparar cierre", exact: true })
-    .click();
-  await page
-    .getByLabel("Destino de las tareas pendientes", { exact: true })
-    .selectOption(future.id);
+  // A plan refresh can re-render the toolbar and fold the close form again: open it until it stays.
+  const closeTarget = page.getByLabel("Destino de las tareas pendientes", { exact: true });
+  await expect(async () => {
+    if (!(await closeTarget.isVisible()))
+      await page.getByRole("button", { name: "Preparar cierre", exact: true }).click();
+    await expect(closeTarget).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 20000 });
+  await closeTarget.selectOption(future.id);
   await page
     .getByRole("checkbox", { name: /Confirmo el cierre con 1 criterios/ })
     .check();

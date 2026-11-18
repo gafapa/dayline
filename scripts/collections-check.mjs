@@ -319,7 +319,8 @@ try {
   await dialog
     .getByLabel("Fecha base de la copia", { exact: true })
     .fill("2027-05-01");
-  const beforeCount = (await snapshot()).length;
+  // Other checks may write to this workspace at the same time: compare identities, not totals.
+  const before = new Set((await snapshot()).map((r) => r.id));
   let committed;
   const applyPattern = "**/api/workspaces/*/templates/*/apply";
   await page.route(applyPattern, async (route) => {
@@ -344,7 +345,9 @@ try {
     .getByText("Comando confirmado: 4 elementos y 1 adjuntos.", { exact: true })
     .waitFor();
   stored = await snapshot();
-  assert.equal(stored.length, beforeCount + 4);
+  const added = stored.filter((r) => !before.has(r.id));
+  assert.equal(added.filter((r) => r.id === committed.rootId || committed.ids.includes(r.id)).length, 4);
+  assert.equal(added.filter((r) => r.title === `Copia de colección ${suffix}`).length, 1, "the retry did not apply the template twice");
   const root = stored.find((r) => r.id === committed.rootId),
     clones = stored.filter((r) => committed.ids.includes(r.id));
   assert.equal(root.data.private, true);

@@ -6,17 +6,20 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently -k \"tsx watch server/index.ts\" \"vite --host 127.0.0.1\"",
-    "build": "tsc --noEmit && vite build && node scripts/build-service-worker.mjs && tsup server/index.ts --format esm --platform node --target node24 --out-dir build --external @electric-sql/pglite",
+    "build": "tsc --noEmit && npm run build:app",
+    "build:app": "vite build && node scripts/build-service-worker.mjs && tsup server/index.ts --format esm --platform node --target node24 --out-dir build --external @electric-sql/pglite",
     "start": "node --env-file-if-exists=.env build/index.js",
     "test": "tsx --test tests/*.test.ts",
     "test:watch": "tsx --test --watch tests/*.test.ts",
     "test:one": "tsx --test",
     "typecheck": "tsc --noEmit",
-    "check": "tsc --noEmit && tsx --test tests/*.test.ts",
+    "check": "node scripts/verify.mjs --no-browser",
+    "verify": "node scripts/verify.mjs",
+    "verify:quick": "node scripts/verify.mjs --quick",
     "preview": "concurrently -k \"node build/index.js\" \"vite preview --host 127.0.0.1 --port 5173 --strictPort\"",
     "preview:test": "node scripts/preview-test.mjs",
-    "e2e": "node scripts/browser-check.mjs && node scripts/verify-browser.mjs",
-    "e2e:quick": "node scripts/browser-check.mjs && node scripts/verify-browser.mjs --quick"
+    "e2e": "node scripts/verify-browser.mjs",
+    "e2e:quick": "node scripts/verify-browser.mjs --quick"
   },
   "dependencies": {
     "@dnd-kit/core": "6.3.1",

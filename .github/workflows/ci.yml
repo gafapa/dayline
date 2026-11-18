@@ -58,10 +58,9 @@ jobs:
           done
           cat .local/preview.log
           exit 1
-      - name: Create the synthetic account
-        run: node scripts/browser-check.mjs
       - name: Run every browser check
-        run: node scripts/verify-browser.mjs
+        # browser-check sets up the synthetic account first; the rest run two at a time.
+        run: node scripts/verify-browser.mjs --jobs 2
       - name: Upload logs and screenshots
         if: always()
         uses: actions/upload-artifact@v4
