@@ -29,19 +29,22 @@ try{
  const saved=(await snapshot(project.id)).data.workflowStates,[prepared,triage,qa]=saved;
  phase='board columns';await page.goto(`${base}/?view=tasks&workspace=${ws}&project=${project.id}`,{waitUntil:'domcontentloaded'});await page.getByText('Sincronizado',{exact:true}).waitFor();
  const boardToggle=page.getByRole('button',{name:'Tablero',exact:true});const showBoard=async()=>{await boardToggle.waitFor();if(await boardToggle.getAttribute('aria-pressed')!=='true')await boardToggle.click();};await showBoard();
+ const showList=async()=>{const t=page.getByRole('button',{name:'Lista',exact:true});await t.waitFor();if(await t.getAttribute('aria-pressed')!=='true')await t.click();};
  await page.getByRole('region',{name:'Preparada',exact:true}).getByRole('button',{name:task.title,exact:true}).waitFor();
  assert.equal(await page.getByRole('region',{name:'Por hacer',exact:true}).count(),0,'categories with named states use them as columns');
- phase='move to named state';await page.getByLabel(`Estado de ${task.title}`,{exact:true}).selectOption(qa.id);
+ assert.equal(await page.locator('.board-task').getByLabel(`Estado de ${task.title}`,{exact:true}).count(),0,'board cards do not repeat the state');
+ phase='assign from the card avatar';const pick=page.locator('.board-task').getByLabel(`Responsable de ${task.title}`,{exact:true});await pick.selectOption({label:'Equipo de pruebas'});await expect.poll(async()=>!!(await snapshot(task.id))?.data.assigneeId).toBe(true);await expect(page.locator('.board-task').filter({hasText:task.title}).locator('.avatar')).toHaveText('EQ');await pick.selectOption('');await expect.poll(async()=>(await snapshot(task.id))?.data.assigneeId??null).toBe(null);
+ phase='move to named state';await showList();await page.getByLabel(`Estado de ${task.title}`,{exact:true}).selectOption(qa.id);await showBoard();
  await page.getByRole('region',{name:'QA',exact:true}).getByRole('button',{name:task.title,exact:true}).waitFor();
  await expect.poll(async()=>{const t=await snapshot(task.id);return `${t?.data.status}:${t?.data.stateId}`;}).toBe(`review:${qa.id}`);
  phase='wip limit';await page.getByRole('region',{name:'QA',exact:true}).getByText('1/1',{exact:true}).waitFor();
  phase='offline state change';await controlledByServiceWorker(page);await context.setOffline(true);
- await page.getByLabel(`Estado de ${task.title}`,{exact:true}).selectOption(triage.id);await page.getByRole('region',{name:'Triaje',exact:true}).getByRole('button',{name:task.title,exact:true}).waitFor();
+ await showList();await page.getByLabel(`Estado de ${task.title}`,{exact:true}).selectOption(triage.id);await showBoard();await page.getByRole('region',{name:'Triaje',exact:true}).getByRole('button',{name:task.title,exact:true}).waitFor();
  await page.reload({waitUntil:'domcontentloaded'});await showBoard();await page.getByRole('region',{name:'Triaje',exact:true}).getByRole('button',{name:task.title,exact:true}).waitFor();
  await context.setOffline(false);
  await expect.poll(async()=>{const t=await snapshot(task.id);return `${t?.data.status}:${t?.data.stateId}`;},{timeout:30000}).toBe(`todo:${triage.id}`);
  for(const width of [1440,768,390]){await page.setViewportSize({width,height:1000});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`horizontal overflow at ${width}px: `+await page.evaluate(()=>[...document.querySelectorAll('body *')].filter(e=>e.getBoundingClientRect().right>innerWidth+1&&!e.closest('.board,.section-tabs')).slice(0,4).map(e=>e.tagName+'.'+e.className).join(', ')));await page.screenshot({path:`docs/evidence/workflow-board-${width}.png`});}
  assert.equal(errors.length,0,errors.join('\n'));
- await writeFile('docs/evidence/workflow-check.json',JSON.stringify({verifiedAt:new Date().toISOString(),syntheticData:true,checks:{configureNamedStates:true,reorderWithinCategory:true,namedBoardColumns:true,namedStateSelection:true,wipLimitShownOnColumn:true,offlineStateChangeAndReload:true,reconnectPersistsCategoryAndState:true,responsiveWidths:[1440,768,390]},pageErrors:errors},null,2));
+ await writeFile('docs/evidence/workflow-check.json',JSON.stringify({verifiedAt:new Date().toISOString(),syntheticData:true,checks:{configureNamedStates:true,reorderWithinCategory:true,namedBoardColumns:true,namedStateSelection:true,boardCardsWithoutStateSelect:true,assignFromCardAvatar:true,wipLimitShownOnColumn:true,offlineStateChangeAndReload:true,reconnectPersistsCategoryAndState:true,responsiveWidths:[1440,768,390]},pageErrors:errors},null,2));
  console.info('Workflow configuration, named board columns, offline state changes and responsive layouts verified.');
 }catch(error){console.error('Failed phase:',phase);await page.screenshot({path:'.local/workflow-failure.png',fullPage:true}).catch(()=>{});throw error;}finally{await browser.close();}

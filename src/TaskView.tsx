@@ -155,21 +155,8 @@ export default function TaskView({
                   columns={fieldColumns}
                 />
                 <div>
-                  {canEdit && (
-                    <WorkflowStateSelect
-                      label={`Estado de ${t.title}`}
-                      task={t}
-                      projects={projects}
-                      onChange={(data) => void update({ ...t, data })}
-                    />
-                  )}
                   {!showProject && due(t)}
-                  <span className="avatar small">
-                    {members
-                      .find((m: any) => m.id === t.data.assigneeId)
-                      ?.name?.slice(0, 2)
-                      .toUpperCase() || "—"}
-                  </span>
+                  <Assignee task={t} members={members} canEdit={canEdit} update={update} />
                 </div>
               </BoardCard>
             ))}
@@ -259,24 +246,7 @@ export default function TaskView({
             )}
           </div>
           <span className="assignee-cell" role="cell">
-            {t.data.assigneeId ? (
-              <>
-                <span className="avatar small">
-                  {members
-                    .find((m: any) => m.id === t.data.assigneeId)
-                    ?.name?.slice(0, 2)
-                    .toUpperCase() || "—"}
-                </span>
-                <span>
-                  {members.find((m: any) => m.id === t.data.assigneeId)?.name ||
-                    "Sin asignar"}
-                </span>
-              </>
-            ) : (
-              <span className="muted" aria-label="Sin asignar">
-                —
-              </span>
-            )}
+            <Assignee task={t} members={members} canEdit={canEdit} update={update} withName />
           </span>
           <span className="date-cell" role="cell">
             {dateText(t.data.dueDate)}
@@ -384,6 +354,59 @@ function BoardCard({
     >
       {children}
     </article>
+  );
+}
+
+/**
+ * The task's assignee as an avatar. Where the task can be edited, clicking it opens the list of
+ * people (a native select laid over the avatar, so it works with keyboard, touch and readers).
+ */
+function Assignee({
+  task,
+  members,
+  canEdit,
+  update,
+  withName = false,
+}: {
+  task: Resource;
+  members: any[];
+  canEdit: boolean;
+  update: (task: Resource) => Promise<unknown> | void;
+  withName?: boolean;
+}) {
+  const person = members.find((m: any) => m.id === task.data.assigneeId);
+  const face = (
+    <>
+      <span className={`avatar small ${person ? "" : "avatar-empty"}`}>
+        {person?.name?.slice(0, 2).toUpperCase() || "—"}
+      </span>
+      {withName && <span className={person ? "" : "muted"}>{person?.name || "Sin asignar"}</span>}
+    </>
+  );
+  if (!canEdit)
+    return (
+      <span className="assignee-pick" title={person?.name || "Sin asignar"}>
+        {face}
+      </span>
+    );
+  return (
+    <label className="assignee-pick editable" title={`Responsable: ${person?.name || "sin asignar"}. Pulsa para cambiarlo`}>
+      {face}
+      <select
+        aria-label={`Responsable de ${task.title}`}
+        value={task.data.assigneeId || ""}
+        onPointerDown={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+        onChange={(e) => void update({ ...task, data: { ...task.data, assigneeId: e.target.value || null } })}
+      >
+        <option value="">Sin asignar</option>
+        {members.map((m: any) => (
+          <option key={m.id} value={m.id}>
+            {m.name}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 
