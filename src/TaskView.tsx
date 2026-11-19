@@ -1,16 +1,14 @@
 import {
   CalendarDays,
-  Circle,
-  CircleCheck,
+  ChevronDown,
   Flag,
   ListChecks,
-  CircleDot,
-  Clock3,
   CheckCheck,
   GripVertical,
   Plus,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
+import { StatusIcon } from "./ui-common";
 import { applyStateOption } from "../shared/workflow";
 import { placeInOrder, useDrag, useDrop, type DragItem } from "./dnd";
 import type { Resource } from "../shared/model";
@@ -23,17 +21,6 @@ const dateText = (value?: string) =>
         new Date(value),
       )
     : "Sin fecha";
-function StatusIcon({ status }: { status: string }) {
-  const Icon =
-    status === "done"
-      ? CircleCheck
-      : status === "in_progress"
-        ? CircleDot
-        : status === "review"
-          ? Clock3
-          : Circle;
-  return <Icon className={`status-icon ${status}`} size={17} />;
-}
 export default function TaskView({
   tasks,
   projects,
@@ -57,17 +44,33 @@ export default function TaskView({
   const recentDone = (column: Column) =>
     column.status !== "done" || allDone[column.value]
       ? column.tasks
-      : column.tasks.filter((t: Resource) => Date.parse(t.updated_at) >= weekAgo);
+      : column.tasks.filter(
+          (t: Resource) => Date.parse(t.updated_at) >= weekAgo,
+        );
   const today = new Date().toLocaleDateString("en-CA");
-  const tomorrow = new Date(Date.now() + 86_400_000).toLocaleDateString("en-CA");
+  const tomorrow = new Date(Date.now() + 86_400_000).toLocaleDateString(
+    "en-CA",
+  );
   const due = (t: Resource) => {
     if (!t.data.dueDate) return null;
     const open = !["done", "cancelled"].includes(t.data.status);
-    const when = open && t.data.dueDate < today ? "late" : open && t.data.dueDate === today ? "due-today" : "";
+    const when =
+      open && t.data.dueDate < today
+        ? "late"
+        : open && t.data.dueDate === today
+          ? "due-today"
+          : "";
     return (
-      <span className={`board-card-due ${when}`} title={`Fecha límite: ${dateText(t.data.dueDate)}${when === "late" ? " (vencida)" : ""}`}>
+      <span
+        className={`board-card-due ${when}`}
+        title={`Fecha límite: ${dateText(t.data.dueDate)}${when === "late" ? " (vencida)" : ""}`}
+      >
         <CalendarDays size={13} aria-hidden="true" />
-        {t.data.dueDate === today ? "Hoy" : t.data.dueDate === tomorrow ? "Mañana" : dateText(t.data.dueDate)}
+        {t.data.dueDate === today
+          ? "Hoy"
+          : t.data.dueDate === tomorrow
+            ? "Mañana"
+            : dateText(t.data.dueDate)}
       </span>
     );
   };
@@ -80,6 +83,21 @@ export default function TaskView({
       : (t.data.checklist || []).filter((i: any) => i.done).length;
     return total ? { done, total } : null;
   };
+  const [folded, setFolded] = useState<Record<string, boolean>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("dayline.listFolded") || "{}");
+    } catch {
+      return {};
+    }
+  });
+  const fold = (key: string) =>
+    setFolded((current) => {
+      const next = { ...current, [key]: !current[key] };
+      try {
+        localStorage.setItem("dayline.listFolded", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
   const reorderable = canEdit && orderable;
   /** Saves `task` moved before `beforeId` in `list`, optionally into a new column. */
   const place = async (
@@ -94,19 +112,27 @@ export default function TaskView({
     const moved = column ? applyStateOption(task.data, column) : task.data;
     const sameColumn =
       !column ||
-      (moved.status === task.data.status && moved.stateId === task.data.stateId);
+      (moved.status === task.data.status &&
+        moved.stateId === task.data.stateId);
     if (sameColumn && !changes.size) return;
     await update({
       ...task,
-      data: changes.has(task.id) ? { ...moved, order: changes.get(task.id) } : moved,
+      data: changes.has(task.id)
+        ? { ...moved, order: changes.get(task.id) }
+        : moved,
     });
     for (const other of list)
       if (other.id !== task.id && changes.has(other.id))
-        await update({ ...other, data: { ...other.data, order: changes.get(other.id) } });
+        await update({
+          ...other,
+          data: { ...other.data, order: changes.get(other.id) },
+        });
   };
   if (mode === "board")
     return (
-      <div className={`board ${Object.keys(selected).length ? "selecting" : ""}`}>
+      <div
+        className={`board ${Object.keys(selected).length ? "selecting" : ""}`}
+      >
         {boardColumns(tasks, projects).map((column) => (
           <BoardColumn
             key={column.value}
@@ -115,7 +141,10 @@ export default function TaskView({
             place={place}
           >
             {addTask && canEdit && !archivedColumn(column) && (
-              <InlineAdd label={`Añadir tarea en ${column.label}`} add={(title) => addTask(title, column)} />
+              <InlineAdd
+                label={`Añadir tarea en ${column.label}`}
+                add={(title) => addTask(title, column)}
+              />
             )}
             {recentDone(column).map((t: Resource) => (
               <BoardCard
@@ -128,7 +157,8 @@ export default function TaskView({
               >
                 {showProject && (
                   <small className="board-card-project">
-                    {projects.find((p: Resource) => p.id === t.data.projectId)?.title || "Sin proyecto"}
+                    {projects.find((p: Resource) => p.id === t.data.projectId)
+                      ?.title || "Sin proyecto"}
                   </small>
                 )}
                 <div className="task-choice">
@@ -158,10 +188,16 @@ export default function TaskView({
                   columns={fieldColumns}
                 />
                 <div className="board-card-foot">
-                  {(t.data.priority === "urgent" || t.data.priority === "high") && (
-                    <span className={`board-card-priority ${t.data.priority}`} title={`Prioridad ${t.data.priority === "urgent" ? "urgente" : "alta"}`}>
+                  {(t.data.priority === "urgent" ||
+                    t.data.priority === "high") && (
+                    <span
+                      className={`board-card-priority ${t.data.priority}`}
+                      title={`Prioridad ${t.data.priority === "urgent" ? "urgente" : "alta"}`}
+                    >
                       <Flag size={13} aria-hidden="true" />
-                      <span className="board-card-priority-text">{t.data.priority === "urgent" ? "Urgente" : "Alta"}</span>
+                      <span className="board-card-priority-text">
+                        {t.data.priority === "urgent" ? "Urgente" : "Alta"}
+                      </span>
                     </span>
                   )}
                   {due(t)}
@@ -175,7 +211,12 @@ export default function TaskView({
                       {progress(t)!.done}/{progress(t)!.total}
                     </span>
                   )}
-                  <Assignee task={t} members={members} canEdit={canEdit} update={update} />
+                  <Assignee
+                    task={t}
+                    members={members}
+                    canEdit={canEdit}
+                    update={update}
+                  />
                 </div>
               </BoardCard>
             ))}
@@ -193,7 +234,10 @@ export default function TaskView({
     );
   const listAdd =
     addTask && canEdit ? (
-      <InlineAdd label="Añadir tarea" add={(title) => addTask(title, { status: "todo", stateId: null })} />
+      <InlineAdd
+        label="Añadir tarea"
+        add={(title) => addTask(title, { status: "todo", stateId: null })}
+      />
     ) : null;
   if (!tasks.length)
     return (
@@ -206,71 +250,80 @@ export default function TaskView({
       </>
     );
   return (
-    <div className="task-table" role="table" aria-label="Tareas">
+    <div className="task-table grouped" role="table" aria-label="Tareas">
       <div className="task-table-head" role="row">
         <span role="columnheader">Tarea</span>
-        <span role="columnheader">Estado</span>
         <span role="columnheader">Responsable</span>
         <span role="columnheader">Fecha</span>
       </div>
-      {tasks.map((t: Resource) => (
-        <ListRow
-          key={t.id}
-          task={t}
-          tasks={tasks}
+      {boardColumns(tasks, projects).map((column) => (
+        <ListGroup
+          key={column.value}
+          column={column}
           canEdit={canEdit}
-          reorderable={reorderable}
           place={place}
+          folded={!!folded[column.value]}
+          toggle={() => fold(column.value)}
         >
-          <div role="cell" className="task-title-cell">
-            {toggle && canEdit && (
-              <label className="task-selection">
-                <input
-                  type="checkbox"
-                  aria-label={`Seleccionar ${t.title}`}
-                  checked={selected[t.id] !== undefined}
-                  onChange={() => toggle(t)}
-                />
-              </label>
-            )}
-            <button className="task-name" onClick={() => open(t)}>
-              <StatusIcon status={t.data.status} />
-              <span>
-                <strong>{t.title}</strong>
-                <small>
-                  {projects.find((p: Resource) => p.id === t.data.projectId)
-                    ?.title || "Sin proyecto"}
-                  {t.data.priority === "urgent" ? " · Urgente" : ""}
-                </small>
-                <TaskCustomFieldValues
+          {column.tasks.map((t: Resource) => (
+            <ListRow
+              key={t.id}
+              task={t}
+              tasks={column.tasks}
+              column={column}
+              canEdit={canEdit}
+              reorderable={reorderable}
+              place={place}
+            >
+              <div role="cell" className="task-title-cell">
+                {toggle && canEdit && (
+                  <label className="task-selection">
+                    <input
+                      type="checkbox"
+                      aria-label={`Seleccionar ${t.title}`}
+                      checked={selected[t.id] !== undefined}
+                      onChange={() => toggle(t)}
+                    />
+                  </label>
+                )}
+                <StatusPick
                   task={t}
                   projects={projects}
+                  canEdit={canEdit}
+                  update={update}
+                />
+                <button className="task-name" onClick={() => open(t)}>
+                  <span>
+                    <strong>{t.title}</strong>
+                    <small>
+                      {projects.find((p: Resource) => p.id === t.data.projectId)
+                        ?.title || "Sin proyecto"}
+                      {t.data.priority === "urgent" ? " · Urgente" : ""}
+                    </small>
+                    <TaskCustomFieldValues
+                      task={t}
+                      projects={projects}
+                      members={members}
+                      columns={fieldColumns}
+                    />
+                  </span>
+                </button>
+              </div>
+              <span className="assignee-cell" role="cell">
+                <Assignee
+                  task={t}
                   members={members}
-                  columns={fieldColumns}
+                  canEdit={canEdit}
+                  update={update}
+                  withName
                 />
               </span>
-            </button>
-          </div>
-          <div role="cell">
-            {canEdit ? (
-              <WorkflowStateSelect
-                className="inline-select"
-                label={`Estado de ${t.title}`}
-                task={t}
-                projects={projects}
-                onChange={(data) => void update({ ...t, data })}
-              />
-            ) : (
-              <span>{stateLabel(t, projects)}</span>
-            )}
-          </div>
-          <span className="assignee-cell" role="cell">
-            <Assignee task={t} members={members} canEdit={canEdit} update={update} withName />
-          </span>
-          <span className="date-cell" role="cell">
-            {dateText(t.data.dueDate)}
-          </span>
-        </ListRow>
+              <span className="date-cell" role="cell">
+                {dateText(t.data.dueDate)}
+              </span>
+            </ListRow>
+          ))}
+        </ListGroup>
       ))}
       {listAdd}
     </div>
@@ -304,7 +357,9 @@ function BoardColumn({
     `column:${column.value}`,
     {
       accepts: (item) => isTask(item) && !archivedColumn(column),
-      drop: async (item) => { if (isTask(item)) await place(item.task, column.tasks, null, column); },
+      drop: async (item) => {
+        if (isTask(item)) await place(item.task, column.tasks, null, column);
+      },
     },
     !canEdit,
   );
@@ -349,12 +404,19 @@ function BoardCard({
   active?: boolean;
   children: ReactNode;
 }) {
-  const drag = useDrag(`task:${task.id}`, { type: "task", task, label: task.title }, !canEdit);
+  const drag = useDrag(
+    `task:${task.id}`,
+    { type: "task", task, label: task.title },
+    !canEdit,
+  );
   const drop = useDrop(
     `before:${task.id}`,
     {
-      accepts: (item) => isTask(item) && item.task.id !== task.id && !archivedColumn(column),
-      drop: async (item) => { if (isTask(item)) await place(item.task, column.tasks, task.id, column); },
+      accepts: (item) =>
+        isTask(item) && item.task.id !== task.id && !archivedColumn(column),
+      drop: async (item) => {
+        if (isTask(item)) await place(item.task, column.tasks, task.id, column);
+      },
     },
     !canEdit,
   );
@@ -399,7 +461,11 @@ function Assignee({
       <span className={`avatar small ${person ? "" : "avatar-empty"}`}>
         {person?.name?.slice(0, 2).toUpperCase() || "—"}
       </span>
-      {withName && <span className={person ? "" : "muted"}>{person?.name || "Sin asignar"}</span>}
+      {withName && (
+        <span className={person ? "" : "muted"}>
+          {person?.name || "Sin asignar"}
+        </span>
+      )}
     </>
   );
   if (!canEdit)
@@ -409,14 +475,22 @@ function Assignee({
       </span>
     );
   return (
-    <label className="assignee-pick editable" title={`Responsable: ${person?.name || "sin asignar"}. Pulsa para cambiarlo`}>
+    <label
+      className="assignee-pick editable"
+      title={`Responsable: ${person?.name || "sin asignar"}. Pulsa para cambiarlo`}
+    >
       {face}
       <select
         aria-label={`Responsable de ${task.title}`}
         value={task.data.assigneeId || ""}
         onPointerDown={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
-        onChange={(e) => void update({ ...task, data: { ...task.data, assigneeId: e.target.value || null } })}
+        onChange={(e) =>
+          void update({
+            ...task,
+            data: { ...task.data, assigneeId: e.target.value || null },
+          })
+        }
       >
         <option value="">Sin asignar</option>
         {members.map((m: any) => (
@@ -433,6 +507,7 @@ function Assignee({
 function ListRow({
   task,
   tasks,
+  column,
   canEdit,
   reorderable,
   place,
@@ -440,19 +515,27 @@ function ListRow({
 }: {
   task: Resource;
   tasks: Resource[];
+  column: Column;
   canEdit: boolean;
   reorderable: boolean;
   place: Place;
   children: ReactNode;
 }) {
-  const drag = useDrag(`row:${task.id}`, { type: "task", task, label: task.title }, !canEdit);
+  const drag = useDrag(
+    `row:${task.id}`,
+    { type: "task", task, label: task.title },
+    !canEdit,
+  );
   const drop = useDrop(
     `row-before:${task.id}`,
     {
-      accepts: (item) => isTask(item) && item.task.id !== task.id,
-      drop: async (item) => { if (isTask(item)) await place(item.task, tasks, task.id); },
+      accepts: (item) =>
+        isTask(item) && item.task.id !== task.id && !archivedColumn(column),
+      drop: async (item) => {
+        if (isTask(item)) await place(item.task, tasks, task.id, column);
+      },
     },
-    !reorderable,
+    !canEdit,
   );
   return (
     <div
@@ -467,7 +550,11 @@ function ListRow({
         <button
           className="drag-grip"
           aria-label={`Arrastrar ${task.title}`}
-          title={reorderable ? "Arrastra para reordenar o mover a un proyecto" : "Arrastra a un proyecto de la barra lateral"}
+          title={
+            reorderable
+              ? "Arrastra para reordenar o mover a un proyecto"
+              : "Arrastra a un proyecto de la barra lateral"
+          }
           {...drag.handle}
         >
           <GripVertical size={15} />
@@ -478,14 +565,128 @@ function ListRow({
   );
 }
 
+/** A state's group in the list: its header folds it and takes dropped tasks to that state. */
+function ListGroup({
+  column,
+  canEdit,
+  place,
+  folded,
+  toggle,
+  children,
+}: {
+  column: Column;
+  canEdit: boolean;
+  place: Place;
+  folded: boolean;
+  toggle: () => void;
+  children: ReactNode;
+}) {
+  const drop = useDrop(
+    `group:${column.value}`,
+    {
+      accepts: (item) => isTask(item) && !archivedColumn(column),
+      drop: async (item) => {
+        if (isTask(item)) await place(item.task, column.tasks, null, column);
+      },
+    },
+    !canEdit,
+  );
+  return (
+    <div
+      className={`task-group ${folded ? "folded" : ""}`}
+      role="rowgroup"
+      aria-label={column.label}
+    >
+      <div
+        ref={drop.ref}
+        role="row"
+        className={`task-group-head ${drop.over ? "drop-over" : ""} ${drop.armed ? "drop-armed" : ""}`}
+      >
+        <button
+          type="button"
+          role="cell"
+          aria-expanded={!folded}
+          onClick={toggle}
+        >
+          <ChevronDown
+            size={15}
+            className="task-group-chevron"
+            aria-hidden="true"
+          />
+          <StatusIcon status={column.status} />
+          <span>{column.label}</span>
+          <span
+            className={
+              column.limit && column.tasks.length > column.limit
+                ? "over-limit"
+                : "task-group-count"
+            }
+          >
+            {column.limit
+              ? `${column.tasks.length}/${column.limit}`
+              : column.tasks.length}
+          </span>
+        </button>
+      </div>
+      {!folded && children}
+    </div>
+  );
+}
+
+/** The row's state icon; where the task can be edited, clicking it opens the list of states. */
+function StatusPick({
+  task,
+  projects,
+  canEdit,
+  update,
+}: {
+  task: Resource;
+  projects: Resource[];
+  canEdit: boolean;
+  update: (task: Resource) => Promise<unknown> | void;
+}) {
+  if (!canEdit)
+    return (
+      <span className="status-pick" title={stateLabel(task, projects)}>
+        <StatusIcon status={task.data.status} />
+      </span>
+    );
+  return (
+    <label
+      className="status-pick editable"
+      title={`${stateLabel(task, projects)}. Pulsa para cambiarlo`}
+    >
+      <StatusIcon status={task.data.status} />
+      <WorkflowStateSelect
+        label={`Estado de ${task.title}`}
+        task={task}
+        projects={projects}
+        onPointerDown={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+        onChange={(data) => void update({ ...task, data })}
+      />
+    </label>
+  );
+}
+
 /** "+ Añadir tarea" that turns into a title field: Enter creates and stays open, Escape closes. */
-function InlineAdd({ label, add }: { label: string; add: (title: string) => Promise<unknown> }) {
+function InlineAdd({
+  label,
+  add,
+}: {
+  label: string;
+  add: (title: string) => Promise<unknown>;
+}) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [busy, setBusy] = useState(false);
   if (!open)
     return (
-      <button className="inline-add" aria-label={label} onClick={() => setOpen(true)}>
+      <button
+        className="inline-add"
+        aria-label={label}
+        onClick={() => setOpen(true)}
+      >
         <Plus size={15} /> Añadir tarea
       </button>
     );

@@ -81,8 +81,10 @@ try {
     await expect(page.getByRole('button', { name: 'Lista', exact: true })).toHaveAttribute('aria-pressed', 'true', { timeout: 2000 });
   }).toPass({ timeout: 15000 });
   const row = (task) => page.locator('.task-row').filter({ hasText: task.title });
-  await drag(row(t1).getByRole('button', { name: `Arrastrar ${t1.title}`, exact: true }), row(t3), { position: { y: 6 } });
-  await expect.poll(async () => { const a = await find(ws, t1.id), b = await find(ws, t3.id); return typeof a.data.order === 'number' && typeof b.data.order === 'number' && a.data.order < b.data.order; }).toBe(true);
+  // The list groups by state: t2 and t3 are both to do, so this only reorders.
+  await drag(row(t2).getByRole('button', { name: `Arrastrar ${t2.title}`, exact: true }), row(t3), { position: { y: 6 } });
+  await expect.poll(async () => { const a = await find(ws, t2.id), b = await find(ws, t3.id); return typeof a.data.order === 'number' && typeof b.data.order === 'number' && a.data.order < b.data.order; }).toBe(true);
+  assert.equal((await find(ws, t2.id)).data.status, 'todo', 'reordering inside a group keeps the state');
 
   phase = 'typed filter';
   const search = page.getByLabel('Buscar tareas', { exact: true });

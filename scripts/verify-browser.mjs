@@ -7,7 +7,7 @@
 // A check that fails is run once more on its own; passing then is reported as flaky.
 import {request} from '@playwright/test';
 import {spawn} from 'node:child_process';
-import {open,readFile,access} from 'node:fs/promises';
+import {open,readFile,access,copyFile} from 'node:fs/promises';
 const state=process.env.BROWSER_STATE||'.local/browser-state.json';
 const args=process.argv.slice(2),quick=args.includes('--quick');
 const jobsArg=args.indexOf('--jobs'),jobs=Math.max(1,Number(jobsArg>=0?args[jobsArg+1]:4)||4);
@@ -43,7 +43,7 @@ const results=[],failed=[];
 async function check(name){
   let {exit,seconds}=await run(name);
   if(exit===0){results.push([name,seconds,'']);console.info(`${name} passed (${seconds}s)`);return;}
-  failed.push(name);console.info(`${name} failed (${seconds}s), will retry alone`);
+  failed.push(name);await copyFile(log(name),log(name).replace(/\.log$/,'-first-failure.log'));console.info(`${name} failed (${seconds}s), will retry alone (first log: ${log(name).replace(/\.log$/,'-first-failure.log')})`);
 }
 const started=Date.now(),queue=names.filter(n=>!alone.has(n)),lone=names.filter(n=>alone.has(n));
 // browser-check signs the synthetic account in and saves its session: without one it goes first.

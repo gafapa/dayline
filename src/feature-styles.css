@@ -1805,3 +1805,44 @@ button.library-toggle:hover { background: var(--active); }
 .modal.panel .more-fields > .form-grid { padding: 4px 0; border: 0; }
 .modal.panel .form-grid > .field.relation-picks { align-items: start; }
 .modal.panel .form-grid > .field.relation-picks select { width: auto; min-height: 30px; border: 1px dashed var(--control); border-radius: 999px; font-size: 13px; color: var(--muted); }
+
+/* State icons: one colour per state. */
+.status-icon { flex: none; color: var(--muted); }
+.status-icon.backlog { color: var(--control); }
+.status-icon.todo { color: var(--muted); }
+.status-icon.in_progress { color: var(--amber); }
+.status-icon.review { color: var(--violet); }
+.status-icon.done { color: var(--teal); }
+.status-icon.cancelled { color: var(--control); }
+
+/* List grouped by state: a header per state, then its rows; no state column. */
+.task-table.grouped .task-table-head, .task-table.grouped .task-row { grid-template-columns: minmax(0, 1fr) 170px 90px; }
+.task-table.grouped .assignee-cell { display: flex; }
+.task-group + .task-group { margin-top: 6px; }
+.task-group-head { display: block; border-top: 1px solid var(--rule); }
+.task-group-head > button { display: flex; align-items: center; justify-content: flex-start; gap: 8px; width: 100%; min-height: 42px; padding: 0 8px; border: 0; border-radius: 8px; background: none; color: var(--text); font-size: 13px; font-weight: 700; text-align: left; }
+.task-group-head > button:hover { background: var(--raised); }
+.task-group-head.drop-armed > button { outline: 2px dashed color-mix(in srgb, var(--accent) 35%, transparent); outline-offset: -2px; }
+.task-group-head.drop-over > button { background: color-mix(in srgb, var(--accent) 10%, var(--surface)); outline: 2px solid var(--accent); outline-offset: -2px; }
+.task-group-chevron { color: var(--muted); transition: transform .12s; }
+.task-group.folded .task-group-chevron { transform: rotate(-90deg); }
+.task-group-count { min-width: 20px; padding: 0 7px; border-radius: 999px; background: var(--active); color: var(--muted); font-size: 12px; font-weight: 600; line-height: 20px; text-align: center; }
+.task-group-head .over-limit { color: var(--negative); font-size: 12px; }
+.task-group .task-row { border-top: 1px solid var(--rule); }
+/* The row's state icon is the state picker (a native select laid over it). */
+.status-pick { position: relative; flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; }
+.status-pick.editable { cursor: pointer; }
+.status-pick.editable:hover, .status-pick.editable:focus-within { background: var(--active); }
+.status-pick.editable:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+.status-pick select { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; padding: 0; margin: 0; border: 0; opacity: 0; cursor: pointer; font-size: 16px; }
+.task-table.grouped .task-title-cell { display: flex; align-items: center; gap: 6px; min-width: 0; }
+@media (max-width: 900px) {
+  .task-table.grouped .task-table-head, .task-table.grouped .task-row { grid-template-columns: minmax(0, 1fr) 36px 64px; }
+  .task-table.grouped .assignee-cell > span:not(.assignee-pick), .task-table.grouped .assignee-pick > span:not(.avatar) { display: none; }
+}
+@media (max-width: 650px) {
+  .task-table.grouped .task-table-head, .task-table.grouped .task-row { grid-template-columns: minmax(0, 1fr) 36px; }
+  .task-table.grouped .date-cell, .task-table.grouped .task-table-head > span:last-child { display: none; }
+  .task-table.grouped .task-table-head > span:nth-child(2) { font-size: 0; }
+  .status-pick { width: 36px; height: 36px; }
+}
