@@ -1,10 +1,10 @@
-// Opens an app page through the sidebar (Mi trabajo · Favoritos · Equipo) and its section tabs.
+// Opens an app page through the sidebar (Mi trabajo · Favoritos · Proyectos · Todo el espacio) and its section tabs.
 const groups = {
   Hoy: ['Hoy', 'Recordatorios'],
   Bandeja: ['Bandeja'],
   'Mis tareas': ['Mis tareas'],
   'Mis notas': ['Mis notas'],
-  Tareas: ['Todas las tareas', 'Calendario'],
+  'Todas las tareas': ['Todas las tareas', 'Calendario'],
   Documentos: ['Documentos', 'Plantillas'],
   'Planificación': ['Sprints', 'Hoja de ruta'],
   'Informes y tiempo': ['Informes', 'Tiempo'],

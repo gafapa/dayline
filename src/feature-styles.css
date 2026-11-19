@@ -1846,3 +1846,28 @@ button.library-toggle:hover { background: var(--active); }
   .task-table.grouped .task-table-head > span:nth-child(2) { font-size: 0; }
   .status-pick { width: 36px; height: 36px; }
 }
+
+/* Sidebar: the project tree between "Mi trabajo" and "Todo el espacio". */
+.sidebar-tree { display: flex; flex-direction: column; gap: 2px; }
+.sidebar-tree-head { display: flex; align-items: center; margin: 6px 4px 4px 10px; }
+.sidebar .nav-group-link { flex: 1; min-height: 28px; padding: 0; border: 0; background: none; color: var(--sidebar-muted); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; text-align: left; justify-content: flex-start; cursor: pointer; }
+.sidebar .nav-group-link:hover { color: var(--sidebar-text); }
+.sidebar .sidebar-tree-add { width: 28px; min-width: 28px; height: 28px; min-height: 28px; padding: 0; border: 0; border-radius: 7px; background: none; color: var(--sidebar-muted); display: inline-flex; align-items: center; justify-content: center; }
+.sidebar .sidebar-tree-add:hover { background: var(--sidebar-hover); color: var(--sidebar-text); }
+.sidebar-tree ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+.sidebar .nav-item.tree-row { display: flex; align-items: center; gap: 2px; min-height: 36px; padding-block: 0; padding-inline-end: 8px; }
+.sidebar .tree-toggle { flex: none; width: 22px; min-width: 22px; height: 28px; min-height: 28px; padding: 0; border: 0; border-radius: 6px; background: none; color: var(--sidebar-muted); display: inline-flex; align-items: center; justify-content: center; }
+button.tree-toggle:hover { color: var(--sidebar-text); background: var(--sidebar-hover); }
+.tree-toggle svg { transition: transform .12s; }
+.tree-toggle svg.open { transform: rotate(90deg); }
+.sidebar .tree-open { flex: 1; min-width: 0; min-height: 32px; padding: 0 2px 0 4px; border: 0; background: none; color: inherit; font: inherit; display: flex; align-items: center; gap: 9px; text-align: left; justify-content: flex-start; cursor: pointer; }
+.sidebar .tree-row .project-dot { flex: none; width: 9px; height: 9px; border-radius: 3px; border: 1.5px solid; box-sizing: border-box; }
+.sidebar .tree-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sidebar .tree-progress { flex: none; width: 30px; height: 4px; border-radius: 9px; background: rgba(255, 255, 255, 0.16); overflow: hidden; display: flex; }
+.sidebar .tree-progress > span { border-radius: 9px; }
+.sidebar .tree-row.selected .tree-title { font-weight: 600; }
+.sidebar nav[aria-label="Principal"] .nav-item.tree-row { gap: 0; padding: 0 8px 0 0; min-height: 36px; }
+.sidebar nav[aria-label="Principal"] .tree-open { gap: 8px; padding-left: 2px; }
+.sidebar .tree-progress { width: 22px; }
+.sidebar .tree-row.selected .tree-progress { background: rgba(255, 255, 255, 0.24); }
+.sidebar .sidebar-tree + .nav-group { margin-top: 16px; }

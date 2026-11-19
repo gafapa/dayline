@@ -13,6 +13,7 @@ import { ArrowRight, Bell, CalendarDays, Check, ChevronDown, ChevronRight, Circl
 import { api, ApiError, send } from "./api";
 import { cacheSnapshot, beginSnapshotRead, flushOutbox, localSnapshot, pendingOperations, queueMutation, resolveConflict, rememberSession, rememberedSession, forgetSession } from "./storage";
 import { ProjectList } from "./ProjectList";
+import { SidebarTree } from "./SidebarTree";
 import { kindLabels, type Resource, type ResourceKind, type User, type Workspace } from "../shared/model";
 const CollaborativeEditor = lazy(() => import("./CollaborativeEditor"));
 const MoveResource = lazy(() => import("./MoveResource"));
@@ -73,7 +74,7 @@ const navGroups: {
   { label: "Mis tareas", icon: CircleCheck, pages: ["my_tasks"], section: "mine" },
   { label: "Mis notas", icon: NotebookPen, pages: ["notes"], section: "mine" },
   { label: "Proyectos", icon: FolderKanban, pages: ["projects"], section: "team" },
-  { label: "Tareas", icon: ListTodo, pages: ["tasks", "calendar"], section: "team" },
+  { label: "Todas las tareas", icon: ListTodo, pages: ["tasks", "calendar"], section: "team" },
   { label: "Documentos", icon: FileText, pages: ["documents", "templates"], section: "team" },
   { label: "Planificación", icon: Flag, pages: ["sprints", "planning"], section: "team" },
   { label: "Informes y tiempo", icon: BarChart3, pages: ["reports", "time"], section: "team" },
@@ -1118,9 +1119,25 @@ export default function App() {
         <nav aria-label="Principal">
           {(["mine", "team"] as const).map((section) => (
             <div key={section} className={`nav-section nav-section-${section}`}>
-              <p className="nav-group">{section === "mine" ? "Mi trabajo" : "Equipo"}</p>
+              {section === "team" && (
+                <SidebarTree
+                  projects={projects}
+                  resources={active}
+                  tasks={tasks}
+                  currentId={projectId}
+                  canEdit={canEdit}
+                  open={(p) => navigate("tasks", p.id)}
+                  openAll={() => navigate("projects")}
+                  create={canEdit ? () => setCreating("project") : undefined}
+                  moveTask={async (task, p) => {
+                    await save({ ...task, data: { ...task.data, projectId: p.id } });
+                    notify(`«${task.title}» movida a ${p.title}.`);
+                  }}
+                />
+              )}
+              <p className="nav-group">{section === "mine" ? "Mi trabajo" : "Todo el espacio"}</p>
               {navGroups
-                .filter((group) => group.section === section)
+                .filter((group) => group.section === section && group.label !== "Proyectos")
                 .map(({ label, icon: Icon, pages }) => {
                   const count =
                     label === "Mis tareas"
