@@ -14,6 +14,7 @@ import { api, ApiError, send } from "./api";
 import { cacheSnapshot, beginSnapshotRead, flushOutbox, localSnapshot, pendingOperations, queueMutation, resolveConflict, rememberSession, rememberedSession, forgetSession } from "./storage";
 import { ProjectList } from "./ProjectList";
 import { SidebarTree } from "./SidebarTree";
+import { ProjectSprints } from "./ProjectSprints";
 import { kindLabels, type Resource, type ResourceKind, type User, type Workspace } from "../shared/model";
 const CollaborativeEditor = lazy(() => import("./CollaborativeEditor"));
 const MoveResource = lazy(() => import("./MoveResource"));
@@ -81,11 +82,12 @@ const navGroups: {
 ];
 /** Views shown as tabs inside a project page, each filtered to that project. */
 const projectTabs: [Page, string][] = [
-  ["tasks", "Tareas"],
   ["summary", "Resumen"],
+  ["tasks", "Tareas"],
   ["calendar", "Calendario"],
   ["documents", "Documentos"],
-  ["planning", "Hoja de ruta"],
+  ["planning", "Planificación"],
+  ["time", "Tiempo"],
 ];
 const settingsPages: Page[] = [
   "settings",
@@ -1362,7 +1364,6 @@ export default function App() {
                   >
                     <Star size={17} />
                   </button>
-                  <button onClick={() => openResource(selectedProject)}>Ajustes del proyecto</button>
                 </>
               )}
               {page === "overview" && !selectedProject && (
@@ -1416,6 +1417,7 @@ export default function App() {
                   )}
                 </button>
               ))}
+              <button onClick={() => openResource(selectedProject)}>Ajustes</button>
             </nav>
           )}
           {!selectedProject && !settingsPages.includes(page) && pageGroup(page).length > 1 && (
@@ -1760,7 +1762,8 @@ export default function App() {
                   }
                 >
                   <TimeTracking
-                    key={`${workspaceId}:${timeFocus || "new"}`}
+                    key={`${workspaceId}:${projectId || ""}:${timeFocus || "new"}`}
+                    initialProjectId={projectId || ""}
                     resources={resources}
                     members={members}
                     user={user}
@@ -1950,6 +1953,14 @@ export default function App() {
                     refresh={refresh}
                   />
                 </Suspense>
+              )}
+              {page === "planning" && selectedProject && (
+                <ProjectSprints
+                  project={selectedProject}
+                  sprints={sprints}
+                  tasks={tasks}
+                  openSprints={() => navigate("sprints")}
+                />
               )}
               {page === "planning" && (
                 <Suspense

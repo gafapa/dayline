@@ -29,6 +29,8 @@ type Props = {
   startNew: boolean;
   close: (createNew?: boolean) => void;
   save: (resource: Resource) => Promise<Resource | undefined>;
+  /** Opened from a project's Tiempo tab: the list starts filtered to that project. */
+  initialProjectId?: string;
 };
 type Form = {
   id: string;
@@ -57,6 +59,7 @@ export default function TimeTracking({
   close,
   startNew,
   save,
+  initialProjectId = "",
 }: Props) {
   const zone = validTimeZone(timeZone) ? timeZone : "UTC",
     today = todayForLog(zone),
@@ -91,7 +94,7 @@ export default function TimeTracking({
     [limit, setLimit] = useState(100);
   const [from, setFrom] = useState(today.slice(0, 8) + "01"),
     [to, setTo] = useState(today),
-    [projectId, setProjectId] = useState(""),
+    [projectId, setProjectId] = useState(initialProjectId),
     [authorId, setAuthorId] = useState(user.id),
     [descendants, setDescendants] = useState(true),
     [archives, setArchives] = useState(false);
